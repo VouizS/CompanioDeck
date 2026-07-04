@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
     public class NativeBridge {
         @JavascriptInterface
         public String getVersionName() {
-            return "v0.2";
+            return "v0.3";
         }
 
         @JavascriptInterface
@@ -132,6 +132,28 @@ public class MainActivity extends Activity {
                         startActivityForResult(intent, REQUEST_PICK_COVER);
                     } catch (Exception e) {
                         Toast.makeText(MainActivity.this, "Seletor de imagem indisponível.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void openContentUri(String uriText) {
+            if (uriText == null || uriText.trim().isEmpty()) return;
+            final String safeUri = uriText.trim();
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Uri uri = Uri.parse(safeUri);
+                        Intent intent = new Intent(Intent.ACTION_VIEW);
+                        intent.setDataAndType(uri, "*/*");
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        Intent chooser = Intent.createChooser(intent, "Abrir com");
+                        startActivity(chooser);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "Nenhum app compatível encontrado para abrir este arquivo.", Toast.LENGTH_LONG).show();
                     }
                 }
             });
@@ -250,16 +272,16 @@ public class MainActivity extends Activity {
         if (name == null) return "manual";
         String lower = name.toLowerCase();
         if (lower.endsWith(".gba")) return "gba";
-        if (lower.endsWith(".gb")) return "gb";
+        if (lower.endsWith(".gb")) return "gbc";
         if (lower.endsWith(".gbc")) return "gbc";
         if (lower.endsWith(".nes")) return "nes";
         if (lower.endsWith(".sfc") || lower.endsWith(".smc")) return "snes";
         if (lower.endsWith(".md") || lower.endsWith(".gen") || lower.endsWith(".smd")) return "megadrive";
         if (lower.endsWith(".z64") || lower.endsWith(".n64") || lower.endsWith(".v64")) return "n64";
         if (lower.endsWith(".cso")) return "psp";
-        if (lower.endsWith(".iso")) return "iso-manual";
-        if (lower.endsWith(".bin") || lower.endsWith(".cue")) return "ps1-manual";
-        if (lower.endsWith(".zip")) return "archive-manual";
+        if (lower.endsWith(".iso")) return "manual";
+        if (lower.endsWith(".bin") || lower.endsWith(".cue")) return "manual";
+        if (lower.endsWith(".zip")) return "manual";
         return "manual";
     }
 
@@ -275,6 +297,11 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        String js = "window.CompanionDeckUI && window.CompanionDeckUI.closeProfileIfOpen && window.CompanionDeckUI.closeProfileIfOpen();";
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            webView.evaluateJavascript(js, null);
+        }
+
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;

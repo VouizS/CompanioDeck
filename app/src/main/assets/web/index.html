@@ -12,13 +12,13 @@
       <div class="hero-top">
         <div class="brand-mark">CD</div>
         <div>
-          <p class="eyebrow">v0.2 • graphite lime</p>
+          <p class="eyebrow">v0.3 • perfil do jogo</p>
           <h1>Companion Deck</h1>
         </div>
       </div>
       <p class="hero-copy">
         Central gamer offline-first para organizar jogos próprios, capas locais,
-        perfis de console, Code Deck e motores de emulação futuros.
+        perfis de console, notas, status de teste e motores de emulação futuros.
       </p>
 
       <div class="status-grid">
@@ -102,7 +102,7 @@
       </div>
       <div id="codeList" class="stack-list"></div>
       <div class="empty-note">
-        Nesta base v0.2, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
+        Nesta base v0.3, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
         sempre usando formatos compatíveis e sem injeção.
       </div>
     </section>
@@ -147,6 +147,51 @@
       </div>
     </section>
   </main>
+
+  <section id="profileSheet" class="profile-sheet hidden" aria-hidden="true">
+    <div class="sheet-backdrop"></div>
+    <article class="sheet-card">
+      <div class="sheet-header">
+        <div>
+          <p class="section-label">Perfil do jogo</p>
+          <h2 id="profileTitle">Jogo</h2>
+        </div>
+        <button id="closeProfileBtn" class="icon-button">×</button>
+      </div>
+
+      <div class="profile-cover-row">
+        <div id="profileCoverPreview" class="cover-box big-cover">CD</div>
+        <div class="profile-cover-actions">
+          <button id="profilePickCoverBtn" class="solid-small">Adicionar/Trocar capa</button>
+          <button id="profileRemoveCoverBtn" class="soft-small">Remover capa</button>
+        </div>
+      </div>
+
+      <label class="field-label" for="profileName">Nome do jogo</label>
+      <input id="profileName" class="text-field" type="text" autocomplete="off">
+
+      <label class="field-label" for="profilePlatform">Console / sistema</label>
+      <select id="profilePlatform" class="text-field"></select>
+
+      <label class="field-label" for="profileStatus">Status do teste</label>
+      <select id="profileStatus" class="text-field">
+        <option value="not-tested">Não testado</option>
+        <option value="playable">Jogável</option>
+        <option value="lagging">Travando</option>
+        <option value="finished">Finalizado</option>
+      </select>
+
+      <label class="field-label" for="profileNotes">Notas do jogador</label>
+      <textarea id="profileNotes" class="text-area" rows="4" placeholder="Ex: roda melhor no modo Lite, precisa testar áudio, configurar controle..."></textarea>
+
+      <p id="profileFileInfo" class="hint"></p>
+
+      <div class="button-row sheet-actions">
+        <button id="profileSaveBtn" class="solid-small">Salvar alterações</button>
+        <button id="profileOpenExternalBtn" class="soft-small">Abrir externo</button>
+      </div>
+    </article>
+  </section>
 
   <script src="./app.js"></script>
 </body>

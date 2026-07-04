@@ -38,7 +38,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -61,7 +62,8 @@ button {
 .info-card,
 .empty-note,
 .empty-state,
-.game-card {
+.game-card,
+.sheet-card {
   background: rgba(17, 23, 19, 0.96);
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -148,7 +150,8 @@ h3 {
 .ghost-action,
 .link-button,
 .solid-small,
-.soft-small {
+.soft-small,
+.icon-button {
   border-radius: 18px;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -227,9 +230,9 @@ h3 {
   font-size: 0.86rem;
 }
 
-.text-field {
+.text-field,
+.text-area {
   width: 100%;
-  min-height: 48px;
   border: 1px solid var(--line);
   background: var(--panel-2);
   color: var(--text);
@@ -238,7 +241,18 @@ h3 {
   outline: none;
 }
 
-.text-field:focus {
+.text-field {
+  min-height: 48px;
+}
+
+.text-area {
+  min-height: 110px;
+  padding-top: 12px;
+  resize: vertical;
+}
+
+.text-field:focus,
+.text-area:focus {
   border-color: rgba(163, 230, 53, 0.68);
 }
 
@@ -413,6 +427,11 @@ h3 {
   text-align: center;
 }
 
+.cover-box.big-cover {
+  width: 108px;
+  height: 142px;
+}
+
 .cover-box img {
   width: 100%;
   height: 100%;
@@ -438,6 +457,19 @@ h3 {
   word-break: break-word;
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 6px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: rgba(251, 191, 36, 0.11);
+  color: #fde68a;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .game-actions {
   display: flex;
   flex-wrap: wrap;
@@ -461,6 +493,66 @@ h3 {
   color: #fecaca;
 }
 
+.profile-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-items: end;
+}
+
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+}
+
+.sheet-card {
+  position: relative;
+  width: min(760px, calc(100% - 20px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  margin: 0 auto 10px;
+  padding: 16px;
+  border-radius: 28px;
+}
+
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.profile-cover-row {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 12px;
+  margin: 10px 0 4px;
+  align-items: center;
+}
+
+.profile-cover-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.sheet-actions {
+  margin-bottom: calc(6px + var(--safe-bottom));
+}
+
 @media (min-width: 620px) {
   .status-grid,
   .quick-actions {
@@ -478,5 +570,9 @@ h3 {
   .console-grid,
   .game-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sheet-card {
+    margin-bottom: 20px;
   }
 }

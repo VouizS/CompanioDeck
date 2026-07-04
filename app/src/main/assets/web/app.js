@@ -20,6 +20,13 @@ const platformOptions = [
   { id: "manual", label: "Escolher depois", exts: "manual" }
 ];
 
+const statusOptions = {
+  "not-tested": "Não testado",
+  "playable": "Jogável",
+  "lagging": "Travando",
+  "finished": "Finalizado"
+};
+
 const fallbackConsoles = [
   { id: "gba", name: "Game Boy Advance", tier: "Leve", status: "planejado", extensions: ".gba", description: "Primeiro candidato para motor interno." },
   { id: "snes", name: "SNES", tier: "Leve", status: "planejado", extensions: ".sfc, .smc", description: "Sistema clássico, bom para modo Lite." },
@@ -27,6 +34,7 @@ const fallbackConsoles = [
 ];
 
 let draftGame = null;
+let activeProfileId = "";
 
 function native() {
   return window.CompanionDeckNative || null;
@@ -51,6 +59,12 @@ function openUrl(url) {
   const bridge = native();
   if (bridge && bridge.openOfficialUrl) bridge.openOfficialUrl(url);
   else window.open(url, "_blank");
+}
+
+function openContentUri(uri) {
+  const bridge = native();
+  if (bridge && bridge.openContentUri) bridge.openContentUri(uri);
+  else showToast("Abertura externa disponível apenas no APK.");
 }
 
 async function loadJson(path, fallback) {
@@ -80,7 +94,11 @@ function normalizeGuess(guess) {
 
 function platformLabel(id) {
   const item = platformOptions.find((platform) => platform.id === id);
-  return item ? item.label : "Manual";
+  return item ? item.label : "Escolher depois";
+}
+
+function statusLabel(id) {
+  return statusOptions[id] || "Não testado";
 }
 
 function cleanGameName(fileName) {
@@ -112,17 +130,46 @@ function saveGames(games) {
   localStorage.setItem(STORAGE_GAMES, JSON.stringify(games));
 }
 
+function normalizeGame(game) {
+  return {
+    id: game.id,
+    name: game.name || cleanGameName(game.fileName),
+    platform: game.platform || "manual",
+    fileName: game.fileName || "Arquivo selecionado",
+    fileUri: game.fileUri || "",
+    coverUri: game.coverUri || "",
+    status: game.status || "not-tested",
+    notes: game.notes || "",
+    createdAt: game.createdAt || new Date().toISOString(),
+    updatedAt: game.updatedAt || game.createdAt || new Date().toISOString()
+  };
+}
+
 function addOrUpdateGame(game) {
-  const games = getGames();
-  const index = games.findIndex((item) => item.id === game.id);
-  if (index >= 0) games[index] = game;
-  else games.unshift(game);
+  const games = getGames().map(normalizeGame);
+  const normalized = normalizeGame({ ...game, updatedAt: new Date().toISOString() });
+  const index = games.findIndex((item) => item.id === normalized.id);
+  if (index >= 0) games[index] = normalized;
+  else games.unshift(normalized);
   saveGames(games);
   renderGames();
 }
 
+function getGameById(id) {
+  return getGames().map(normalizeGame).find((item) => item.id === id);
+}
+
+function coverHtml(game, big = false) {
+  if (game.coverUri) {
+    return `<img src="${escapeHtml(game.coverUri)}" alt="Capa de ${escapeHtml(game.name)}">`;
+  }
+  return `<span>${escapeHtml(initials(game.name))}</span>`;
+}
+
 function renderGames() {
-  const games = getGames();
+  const games = getGames().map(normalizeGame);
+  saveGames(games);
+
   const grid = document.querySelector("#gameGrid");
   const empty = document.querySelector("#emptyGames");
   grid.innerHTML = "";
@@ -132,19 +179,16 @@ function renderGames() {
     const card = document.createElement("article");
     card.className = "game-card";
 
-    const cover = game.coverUri
-      ? `<img src="${escapeHtml(game.coverUri)}" alt="Capa de ${escapeHtml(game.name)}">`
-      : `<span>${escapeHtml(initials(game.name))}</span>`;
-
     card.innerHTML = `
-      <div class="cover-box">${cover}</div>
+      <div class="cover-box">${coverHtml(game)}</div>
       <div class="game-info">
         <div class="game-meta">${escapeHtml(platformLabel(game.platform))}</div>
         <div class="game-title">${escapeHtml(game.name)}</div>
+        <div class="status-pill">${escapeHtml(statusLabel(game.status))}</div>
         <div class="game-file">${escapeHtml(game.fileName || "Arquivo selecionado")}</div>
         <div class="game-actions">
-          <button class="mini-button" data-action="cover" data-id="${escapeHtml(game.id)}">Adicionar capa</button>
-          <button class="mini-button" data-action="details" data-id="${escapeHtml(game.id)}">Detalhes</button>
+          <button class="mini-button" data-action="cover" data-id="${escapeHtml(game.id)}">Capa</button>
+          <button class="mini-button" data-action="details" data-id="${escapeHtml(game.id)}">Perfil</button>
           <button class="mini-button danger" data-action="remove" data-id="${escapeHtml(game.id)}">Remover</button>
         </div>
       </div>
@@ -159,7 +203,7 @@ function renderGames() {
 }
 
 function handleGameAction(action, gameId) {
-  const games = getGames();
+  const games = getGames().map(normalizeGame);
   const game = games.find((item) => item.id === gameId);
   if (!game) return;
 
@@ -171,7 +215,7 @@ function handleGameAction(action, gameId) {
   }
 
   if (action === "details") {
-    showToast(`${game.name} • ${platformLabel(game.platform)} • motor futuro`);
+    openProfile(game.id);
     return;
   }
 
@@ -256,11 +300,14 @@ function setupProfiles() {
   }
 }
 
-function setupDraft() {
-  const select = document.querySelector("#draftPlatform");
+function fillPlatformSelect(select) {
   select.innerHTML = platformOptions.map((item) => (
     `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)} — ${escapeHtml(item.exts)}</option>`
   )).join("");
+}
+
+function setupDraft() {
+  fillPlatformSelect(document.querySelector("#draftPlatform"));
 
   document.querySelector("#saveGameBtn").addEventListener("click", () => {
     if (!draftGame) return;
@@ -274,6 +321,8 @@ function setupDraft() {
       fileName: draftGame.fileName,
       fileUri: draftGame.fileUri,
       coverUri: "",
+      status: "not-tested",
+      notes: "",
       createdAt: new Date().toISOString()
     };
 
@@ -288,6 +337,83 @@ function setupDraft() {
     draftGame = null;
     document.querySelector("#gameDraft").classList.add("hidden");
   });
+}
+
+function setupProfileSheet() {
+  fillPlatformSelect(document.querySelector("#profilePlatform"));
+
+  document.querySelector("#closeProfileBtn").addEventListener("click", closeProfile);
+  document.querySelector(".sheet-backdrop").addEventListener("click", closeProfile);
+
+  document.querySelector("#profilePickCoverBtn").addEventListener("click", () => {
+    if (!activeProfileId) return;
+    const bridge = native();
+    if (bridge && bridge.pickCover) bridge.pickCover(activeProfileId);
+  });
+
+  document.querySelector("#profileRemoveCoverBtn").addEventListener("click", () => {
+    if (!activeProfileId) return;
+    const games = getGames().map(normalizeGame);
+    const index = games.findIndex((item) => item.id === activeProfileId);
+    if (index < 0) return;
+    games[index].coverUri = "";
+    games[index].updatedAt = new Date().toISOString();
+    saveGames(games);
+    openProfile(activeProfileId);
+    renderGames();
+    showToast("Capa removida.");
+  });
+
+  document.querySelector("#profileSaveBtn").addEventListener("click", () => {
+    if (!activeProfileId) return;
+    const games = getGames().map(normalizeGame);
+    const index = games.findIndex((item) => item.id === activeProfileId);
+    if (index < 0) return;
+
+    games[index].name = document.querySelector("#profileName").value.trim() || games[index].name;
+    games[index].platform = document.querySelector("#profilePlatform").value || "manual";
+    games[index].status = document.querySelector("#profileStatus").value || "not-tested";
+    games[index].notes = document.querySelector("#profileNotes").value.trim();
+    games[index].updatedAt = new Date().toISOString();
+
+    saveGames(games);
+    renderGames();
+    openProfile(activeProfileId);
+    showToast("Perfil salvo.");
+  });
+
+  document.querySelector("#profileOpenExternalBtn").addEventListener("click", () => {
+    const game = getGameById(activeProfileId);
+    if (!game) return;
+    openContentUri(game.fileUri);
+  });
+}
+
+function openProfile(gameId) {
+  const game = getGameById(gameId);
+  if (!game) return;
+
+  activeProfileId = game.id;
+  document.querySelector("#profileTitle").textContent = game.name;
+  document.querySelector("#profileName").value = game.name;
+  document.querySelector("#profilePlatform").value = game.platform || "manual";
+  document.querySelector("#profileStatus").value = game.status || "not-tested";
+  document.querySelector("#profileNotes").value = game.notes || "";
+  document.querySelector("#profileFileInfo").textContent = `Arquivo: ${game.fileName}. Console: ${platformLabel(game.platform)}. Motor interno ainda futuro.`;
+
+  const preview = document.querySelector("#profileCoverPreview");
+  preview.innerHTML = coverHtml(game, true);
+
+  const sheet = document.querySelector("#profileSheet");
+  sheet.classList.remove("hidden");
+  sheet.setAttribute("aria-hidden", "false");
+}
+
+function closeProfile() {
+  activeProfileId = "";
+  const sheet = document.querySelector("#profileSheet");
+  sheet.classList.add("hidden");
+  sheet.setAttribute("aria-hidden", "true");
 }
 
 function setupActions() {
@@ -329,14 +455,24 @@ window.CompanionDeckUI = {
 
   onCoverPicked(gameId, coverUri) {
     if (!gameId || !coverUri) return;
-    const games = getGames();
+    const games = getGames().map(normalizeGame);
     const index = games.findIndex((item) => item.id === gameId);
     if (index < 0) return;
     games[index].coverUri = coverUri;
+    games[index].updatedAt = new Date().toISOString();
     saveGames(games);
     renderGames();
+    if (activeProfileId === gameId) openProfile(gameId);
     openTab("games");
     showToast("Capa adicionada.");
+  },
+
+  closeProfileIfOpen() {
+    if (!document.querySelector("#profileSheet").classList.contains("hidden")) {
+      closeProfile();
+      return true;
+    }
+    return false;
   }
 };
 
@@ -344,6 +480,7 @@ async function boot() {
   setupTabs();
   setupProfiles();
   setupDraft();
+  setupProfileSheet();
   setupActions();
 
   const [consoles, codes] = await Promise.all([
