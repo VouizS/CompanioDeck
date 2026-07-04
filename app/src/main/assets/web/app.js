@@ -327,7 +327,7 @@ function renderGames() {
         <div class="status-pill ${escapeHtml(game.status)}">${escapeHtml(statusLabel(game.status))}</div>
         <div class="game-file">${escapeHtml(game.fileName || "Arquivo selecionado")}</div>
         <div class="game-actions">
-          <button class="mini-button" data-action="open" data-id="${escapeHtml(game.id)}">Abrir</button>
+          <button class="mini-button primary-mini" data-action="play" data-id="${escapeHtml(game.id)}">Jogar</button>
           <button class="mini-button" data-action="cover" data-id="${escapeHtml(game.id)}">Capa</button>
           <button class="mini-button" data-action="details" data-id="${escapeHtml(game.id)}">Perfil</button>
           <button class="mini-button danger" data-action="remove" data-id="${escapeHtml(game.id)}">Remover</button>
@@ -348,8 +348,8 @@ function handleGameAction(action, gameId) {
   const game = games.find((item) => item.id === gameId);
   if (!game) return;
 
-  if (action === "open") {
-    openGameAssist(game.id);
+  if (action === "play") {
+    openInternalPlayer(game.id);
     return;
   }
 
@@ -511,6 +511,92 @@ function renderProfileLauncher(game) {
 
   box.querySelectorAll("[data-profile-site]").forEach((button) => {
     button.addEventListener("click", () => openUrl(button.dataset.profileSite));
+  });
+}
+
+
+function renderProfilePlayer(game) {
+  const box = document.querySelector("#profilePlayerBox");
+  if (!box) return;
+  box.innerHTML = `
+    <strong>Jogar no Companion Deck</strong>
+    <p>Este será o fluxo principal. Para ${escapeHtml(platformLabel(game.platform))}, o motor interno ainda está em preparação.</p>
+    <div class="launcher-actions">
+      <button class="solid-small" id="profilePlayInternalBtn">Jogar no Companion Deck</button>
+      <button class="soft-small" id="profileExternalFallbackBtn">Abrir em emulador externo</button>
+    </div>
+  `;
+  const playBtn = box.querySelector("#profilePlayInternalBtn");
+  const fallbackBtn = box.querySelector("#profileExternalFallbackBtn");
+  if (playBtn) playBtn.addEventListener("click", () => openInternalPlayer(game.id));
+  if (fallbackBtn) fallbackBtn.addEventListener("click", () => openContentUri(game.fileUri));
+}
+
+function openInternalPlayer(gameId) {
+  const game = getGameById(gameId);
+  if (!game) return;
+
+  const overlay = document.querySelector("#playerOverlay");
+  const title = document.querySelector("#playerTitle");
+  const system = document.querySelector("#playerSystem");
+  const message = document.querySelector("#playerMessage");
+
+  if (title) title.textContent = game.name;
+  if (system) system.textContent = platformLabel(game.platform);
+  if (message) message.textContent = "Player interno preparado. O motor/core real ainda será integrado em uma próxima fase.";
+
+  localStorage.setItem("companionDeckLastPlayerGame", game.id);
+  renderLastPlayerGame();
+
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    overlay.setAttribute("aria-hidden", "false");
+  }
+}
+
+function closeInternalPlayer() {
+  const overlay = document.querySelector("#playerOverlay");
+  if (overlay) {
+    overlay.classList.add("hidden");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+}
+
+function renderLastPlayerGame() {
+  const box = document.querySelector("#playerLastGame");
+  if (!box) return;
+
+  const id = localStorage.getItem("companionDeckLastPlayerGame") || "";
+  const game = getGameById(id);
+  if (!game) {
+    box.classList.add("hidden");
+    return;
+  }
+
+  box.classList.remove("hidden");
+  box.innerHTML = `
+    <strong>Último jogo preparado</strong>
+    <p>${escapeHtml(game.name)} - ${escapeHtml(platformLabel(game.platform))}</p>
+    <div class="launcher-actions">
+      <button class="solid-small" id="lastPlayerOpenBtn">Abrir tela Player</button>
+      <button class="soft-small" id="lastPlayerExternalBtn">Abrir externo</button>
+    </div>
+  `;
+
+  box.querySelector("#lastPlayerOpenBtn")?.addEventListener("click", () => openInternalPlayer(game.id));
+  box.querySelector("#lastPlayerExternalBtn")?.addEventListener("click", () => openContentUri(game.fileUri));
+}
+
+function setupInternalPlayer() {
+  document.querySelector("#closePlayerBtn")?.addEventListener("click", closeInternalPlayer);
+  document.querySelector("#playerBackLibraryBtn")?.addEventListener("click", () => {
+    closeInternalPlayer();
+    openTab("games");
+  });
+  document.querySelector("#playerExternalBtn")?.addEventListener("click", () => {
+    const id = localStorage.getItem("companionDeckLastPlayerGame") || "";
+    const game = getGameById(id);
+    if (game) openContentUri(game.fileUri);
   });
 }
 
@@ -708,6 +794,7 @@ function openProfile(gameId) {
 
   const preview = document.querySelector("#profileCoverPreview");
   preview.innerHTML = coverHtml(game);
+  renderProfilePlayer(game);
   renderProfileLauncher(game);
 
   const sheet = document.querySelector("#profileSheet");
@@ -774,6 +861,10 @@ window.CompanionDeckUI = {
   },
 
   closeProfileIfOpen() {
+    if (!document.querySelector("#playerOverlay").classList.contains("hidden")) {
+      closeInternalPlayer();
+      return true;
+    }
     if (!document.querySelector("#profileSheet").classList.contains("hidden")) {
       closeProfile();
       return true;
@@ -789,6 +880,7 @@ async function boot() {
   setupDraft();
   setupProfileSheet();
   setupActions();
+  setupInternalPlayer();
 
   const [consoles, codes, emulators] = await Promise.all([
     loadJson("./data/consoles.json", fallbackConsoles),

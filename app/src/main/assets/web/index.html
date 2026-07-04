@@ -12,13 +12,13 @@
       <div class="hero-top">
         <div class="brand-mark">CD</div>
         <div>
-          <p class="eyebrow">v0.5 • launcher assistido</p>
+          <p class="eyebrow">v0.6 • player interno</p>
           <h1>Companion Deck</h1>
         </div>
       </div>
       <p class="hero-copy">
-        Central gamer offline-first com biblioteca local, launcher assistido,
-        emuladores oficiais, status, notas e preparação para motores internos futuros.
+        Central gamer offline-first com biblioteca local, player interno preparado,
+        launcher assistido, status, notas e arquitetura pronta para motores/core futuros.
       </p>
 
       <div class="status-grid">
@@ -69,6 +69,7 @@
 
     <nav class="tabs" aria-label="Seções">
       <button class="tab active" data-tab="games">Meus Jogos</button>
+      <button class="tab" data-tab="player">Player</button>
       <button class="tab" data-tab="launcher">Launcher</button>
       <button class="tab" data-tab="consoles">Consoles</button>
       <button class="tab" data-tab="codes">Code Deck</button>
@@ -83,18 +84,9 @@
       </div>
 
       <section class="dashboard-grid" aria-label="Resumo da biblioteca">
-        <article class="dash-card">
-          <span>Total</span>
-          <strong id="dashTotal">0</strong>
-        </article>
-        <article class="dash-card">
-          <span>Jogáveis</span>
-          <strong id="dashPlayable">0</strong>
-        </article>
-        <article class="dash-card">
-          <span>Travando</span>
-          <strong id="dashLagging">0</strong>
-        </article>
+        <article class="dash-card"><span>Total</span><strong id="dashTotal">0</strong></article>
+        <article class="dash-card"><span>Jogáveis</span><strong id="dashPlayable">0</strong></article>
+        <article class="dash-card"><span>Travando</span><strong id="dashLagging">0</strong></article>
       </section>
 
       <section id="consoleCounters" class="chip-row" aria-label="Contadores por console"></section>
@@ -135,78 +127,54 @@
       <div id="gameGrid" class="game-grid"></div>
     </section>
 
+    <section id="tab-player" class="tab-panel">
+      <div class="section-heading">
+        <p class="section-label">Fluxo principal futuro</p>
+        <h2>Player interno</h2>
+      </div>
+      <div class="player-info-card">
+        <strong>O objetivo final é jogar dentro do Companion Deck.</strong>
+        <p>Nesta v0.6, o Player ainda é uma estrutura visual preparada. Ele mostra como será a tela de emulação quando integrarmos o primeiro motor/core leve. Por enquanto, ele não executa ROM internamente.</p>
+      </div>
+      <div id="playerLastGame" class="player-info-card hidden"></div>
+    </section>
+
     <section id="tab-launcher" class="tab-panel">
       <div class="section-heading">
-        <p class="section-label">Ponte assistida</p>
-        <h2>Launcher</h2>
+        <p class="section-label">Opção secundária</p>
+        <h2>Launcher externo</h2>
       </div>
       <div class="launcher-hero">
-        <strong>Motor interno ainda não está ativo.</strong>
-        <p>
-          Nesta fase, o Companion Deck ajuda a abrir o arquivo salvo com um app compatível instalado,
-          ou redireciona para fontes oficiais dos emuladores.
-        </p>
+        <strong>Emulador externo é fallback, não o fluxo principal.</strong>
+        <p>Use esta área quando o motor interno do Companion Deck ainda não existir para aquele console, ou quando o jogador preferir abrir em um app compatível já instalado.</p>
       </div>
       <div id="launcherList" class="stack-list"></div>
     </section>
 
     <section id="tab-consoles" class="tab-panel">
-      <div class="section-heading">
-        <p class="section-label">Organização por sistema</p>
-        <h2>Consoles</h2>
-      </div>
+      <div class="section-heading"><p class="section-label">Organização por sistema</p><h2>Consoles</h2></div>
       <div id="consoleGrid" class="console-grid"></div>
     </section>
 
     <section id="tab-codes" class="tab-panel">
-      <div class="section-heading">
-        <p class="section-label">Consulta e importação futura</p>
-        <h2>Code Deck</h2>
-      </div>
+      <div class="section-heading"><p class="section-label">Consulta e importação futura</p><h2>Code Deck</h2></div>
       <div id="codeList" class="stack-list"></div>
-      <div class="empty-note">
-        Nesta base v0.5, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
-        sempre usando formatos compatíveis e sem injeção.
-      </div>
+      <div class="empty-note">Nesta base v0.6, os códigos continuam como placeholders. A aplicação real virá em fases futuras, sempre usando formatos compatíveis e sem injeção.</div>
     </section>
 
     <section id="tab-credits" class="tab-panel">
-      <div class="section-heading">
-        <p class="section-label">Transparência</p>
-        <h2>Motores & Fontes oficiais</h2>
-      </div>
+      <div class="section-heading"><p class="section-label">Transparência</p><h2>Motores & Fontes oficiais</h2></div>
       <div class="stack-list">
-        <article class="info-card">
-          <h3>PPSSPP</h3>
-          <p>Referência futura para jogos de portátil PSP. Usar apenas fontes oficiais e respeitar licença.</p>
-          <button data-url="https://www.ppsspp.org/" class="link-button">Abrir site oficial</button>
-        </article>
-        <article class="info-card">
-          <h3>Dolphin</h3>
-          <p>Referência futura para Cube/Wii. Requer aparelho forte e integração cuidadosa.</p>
-          <button data-url="https://dolphin-emu.org/" class="link-button">Abrir site oficial</button>
-        </article>
-        <article class="info-card">
-          <h3>RetroArch / Libretro</h3>
-          <p>Referência de arquitetura com frontend e cores. Útil para pensar modularidade.</p>
-          <button data-url="https://www.retroarch.com/" class="link-button">Abrir site oficial</button>
-        </article>
+        <article class="info-card"><h3>PPSSPP</h3><p>Referência futura para jogos de portátil PSP. Usar apenas fontes oficiais e respeitar licença.</p><button data-url="https://www.ppsspp.org/" class="link-button">Abrir site oficial</button></article>
+        <article class="info-card"><h3>Dolphin</h3><p>Referência futura para Cube/Wii. Requer aparelho forte e integração cuidadosa.</p><button data-url="https://dolphin-emu.org/" class="link-button">Abrir site oficial</button></article>
+        <article class="info-card"><h3>RetroArch / Libretro</h3><p>Referência de arquitetura com frontend e cores. Útil para pensar modularidade.</p><button data-url="https://www.retroarch.com/" class="link-button">Abrir site oficial</button></article>
       </div>
     </section>
 
     <section id="tab-rules" class="tab-panel">
-      <div class="section-heading">
-        <p class="section-label">Uso responsável</p>
-        <h2>Avisos do projeto</h2>
-      </div>
+      <div class="section-heading"><p class="section-label">Uso responsável</p><h2>Avisos do projeto</h2></div>
       <div class="legal-card">
-        <p>
-          O Companion Deck não fornece jogos, ROMs, ISOs ou BIOS. O usuário deve adicionar apenas
-          arquivos que possui legalmente. As capas são adicionadas manualmente pelo jogador e ficam
-          salvas apenas como referência local. O Code Deck é voltado a jogos offline, treino e formatos
-          compatíveis. O app não injeta código, não altera memória de outros aplicativos, não burla
-          anti-cheat e não oferece suporte a cheats online.
-        </p>
+        <p>O Companion Deck não fornece jogos, ROMs, ISOs ou BIOS. O usuário deve adicionar apenas arquivos que possui legalmente. As capas são adicionadas manualmente pelo jogador e ficam salvas apenas como referência local. O Code Deck é voltado a jogos offline, treino e formatos compatíveis. O app não injeta código, não altera memória de outros aplicativos, não burla anti-cheat e não oferece suporte a cheats online.</p>
       </div>
     </section>
   </main>
@@ -215,10 +183,7 @@
     <div class="sheet-backdrop"></div>
     <article class="sheet-card">
       <div class="sheet-header">
-        <div>
-          <p class="section-label">Perfil do jogo</p>
-          <h2 id="profileTitle">Jogo</h2>
-        </div>
+        <div><p class="section-label">Perfil do jogo</p><h2 id="profileTitle">Jogo</h2></div>
         <button id="closeProfileBtn" class="icon-button">×</button>
       </div>
 
@@ -247,18 +212,47 @@
       <label class="field-label" for="profileNotes">Notas do jogador</label>
       <textarea id="profileNotes" class="text-area" rows="4" placeholder="Ex: roda melhor no modo Lite, precisa testar áudio, configurar controle..."></textarea>
 
+      <div id="profilePlayerBox" class="player-box"></div>
       <div id="profileLauncherBox" class="launcher-box"></div>
 
       <p id="profileFileInfo" class="hint"></p>
 
       <div class="button-row sheet-actions">
         <button id="profileSaveBtn" class="solid-small">Salvar alterações</button>
-        <button id="profileOpenExternalBtn" class="soft-small">Abrir com app compatível</button>
+        <button id="profileOpenExternalBtn" class="soft-small">Abrir em emulador externo</button>
       </div>
-      <p class="mini-warning">
-        Abrir externo tenta enviar o arquivo para outro app compatível instalado. Não executa emulação interna no Companion Deck ainda.
-      </p>
+      <p class="mini-warning">O botão externo é fallback. O fluxo principal futuro será jogar dentro do Companion Deck quando houver motor interno disponível.</p>
     </article>
+  </section>
+
+  <section id="playerOverlay" class="player-overlay hidden" aria-hidden="true">
+    <div class="player-topbar">
+      <button id="closePlayerBtn" class="icon-button">×</button>
+      <div><p class="section-label">Player interno</p><h2 id="playerTitle">Jogo</h2></div>
+    </div>
+
+    <div class="screen-frame">
+      <div class="screen-glow"></div>
+      <div class="screen-content">
+        <strong id="playerSystem">Console</strong>
+        <p id="playerMessage">Motor interno em preparação.</p>
+        <span class="engine-badge">Core futuro</span>
+      </div>
+    </div>
+
+    <div class="virtual-controls">
+      <div class="dpad">
+        <button>▲</button>
+        <div><button>◀</button><button>●</button><button>▶</button></div>
+        <button>▼</button>
+      </div>
+      <div class="action-pad"><button>A</button><button>B</button><button>X</button><button>Y</button></div>
+    </div>
+
+    <div class="player-bottom-actions">
+      <button id="playerExternalBtn" class="soft-small">Abrir em emulador externo</button>
+      <button id="playerBackLibraryBtn" class="solid-small">Voltar para biblioteca</button>
+    </div>
   </section>
 
   <script src="./app.js"></script>
