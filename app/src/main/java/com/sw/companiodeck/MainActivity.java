@@ -88,7 +88,7 @@ public class MainActivity extends Activity {
     public class NativeBridge {
         @JavascriptInterface
         public String getVersionName() {
-            return "v0.3";
+            return "v0.4";
         }
 
         @JavascriptInterface

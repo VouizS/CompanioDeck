@@ -1,5 +1,6 @@
 const STORAGE_GAMES = "companionDeckGamesV2";
 const STORAGE_PROFILE = "companionDeckProfile";
+const STORAGE_LIBRARY_STATE = "companionDeckLibraryStateV4";
 
 const legalNotice = `O Companion Deck não fornece jogos, ROMs, ISOs ou BIOS.
 O usuário deve adicionar apenas arquivos que possui legalmente.
@@ -27,6 +28,13 @@ const statusOptions = {
   "finished": "Finalizado"
 };
 
+const statusOrder = {
+  "not-tested": 1,
+  "playable": 2,
+  "lagging": 3,
+  "finished": 4
+};
+
 const fallbackConsoles = [
   { id: "gba", name: "Game Boy Advance", tier: "Leve", status: "planejado", extensions: ".gba", description: "Primeiro candidato para motor interno." },
   { id: "snes", name: "SNES", tier: "Leve", status: "planejado", extensions: ".sfc, .smc", description: "Sistema clássico, bom para modo Lite." },
@@ -35,6 +43,7 @@ const fallbackConsoles = [
 
 let draftGame = null;
 let activeProfileId = "";
+let libraryState = loadLibraryState();
 
 function native() {
   return window.CompanionDeckNative || null;
@@ -84,6 +93,25 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function loadLibraryState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_LIBRARY_STATE);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      search: parsed.search || "",
+      platform: parsed.platform || "all",
+      status: parsed.status || "all",
+      sort: parsed.sort || "recent"
+    };
+  } catch (error) {
+    return { search: "", platform: "all", status: "all", sort: "recent" };
+  }
+}
+
+function saveLibraryState() {
+  localStorage.setItem(STORAGE_LIBRARY_STATE, JSON.stringify(libraryState));
 }
 
 function normalizeGuess(guess) {
@@ -159,21 +187,102 @@ function getGameById(id) {
   return getGames().map(normalizeGame).find((item) => item.id === id);
 }
 
-function coverHtml(game, big = false) {
+function coverHtml(game) {
   if (game.coverUri) {
     return `<img src="${escapeHtml(game.coverUri)}" alt="Capa de ${escapeHtml(game.name)}">`;
   }
   return `<span>${escapeHtml(initials(game.name))}</span>`;
 }
 
-function renderGames() {
-  const games = getGames().map(normalizeGame);
-  saveGames(games);
+function filteredAndSortedGames() {
+  const search = libraryState.search.trim().toLowerCase();
+  let games = getGames().map(normalizeGame);
 
+  if (search) {
+    games = games.filter((game) => {
+      const haystack = `${game.name} ${game.fileName} ${platformLabel(game.platform)} ${statusLabel(game.status)} ${game.notes}`.toLowerCase();
+      return haystack.includes(search);
+    });
+  }
+
+  if (libraryState.platform !== "all") {
+    games = games.filter((game) => game.platform === libraryState.platform);
+  }
+
+  if (libraryState.status !== "all") {
+    games = games.filter((game) => game.status === libraryState.status);
+  }
+
+  games.sort((a, b) => {
+    if (libraryState.sort === "name") {
+      return a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+    }
+    if (libraryState.sort === "status") {
+      return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99)
+        || a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+    }
+    if (libraryState.sort === "platform") {
+      return platformLabel(a.platform).localeCompare(platformLabel(b.platform), "pt-BR", { sensitivity: "base" })
+        || a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+    }
+    return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+  });
+
+  return games;
+}
+
+function renderDashboard(allGames) {
+  document.querySelector("#dashTotal").textContent = allGames.length;
+  document.querySelector("#dashPlayable").textContent = allGames.filter((game) => game.status === "playable" || game.status === "finished").length;
+  document.querySelector("#dashLagging").textContent = allGames.filter((game) => game.status === "lagging").length;
+}
+
+function renderConsoleCounters(allGames) {
+  const row = document.querySelector("#consoleCounters");
+  const counts = new Map();
+
+  allGames.forEach((game) => {
+    counts.set(game.platform, (counts.get(game.platform) || 0) + 1);
+  });
+
+  const chips = [
+    { id: "all", label: `Todos (${allGames.length})` },
+    ...Array.from(counts.entries())
+      .sort((a, b) => platformLabel(a[0]).localeCompare(platformLabel(b[0]), "pt-BR", { sensitivity: "base" }))
+      .map(([id, count]) => ({ id, label: `${platformLabel(id)} (${count})` }))
+  ];
+
+  row.innerHTML = chips.map((chip) => `
+    <button class="filter-chip ${libraryState.platform === chip.id ? "active" : ""}" data-platform-chip="${escapeHtml(chip.id)}">
+      ${escapeHtml(chip.label)}
+    </button>
+  `).join("");
+
+  row.querySelectorAll("[data-platform-chip]").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      libraryState.platform = chip.dataset.platformChip;
+      document.querySelector("#filterPlatform").value = libraryState.platform;
+      saveLibraryState();
+      renderGames();
+    });
+  });
+}
+
+function renderGames() {
+  const allGames = getGames().map(normalizeGame);
+  saveGames(allGames);
+
+  const games = filteredAndSortedGames();
   const grid = document.querySelector("#gameGrid");
   const empty = document.querySelector("#emptyGames");
+  const emptyFiltered = document.querySelector("#emptyFilteredGames");
+
+  renderDashboard(allGames);
+  renderConsoleCounters(allGames);
+
   grid.innerHTML = "";
-  empty.classList.toggle("hidden", games.length > 0);
+  empty.classList.toggle("hidden", allGames.length > 0);
+  emptyFiltered.classList.toggle("hidden", !(allGames.length > 0 && games.length === 0));
 
   games.forEach((game) => {
     const card = document.createElement("article");
@@ -184,7 +293,7 @@ function renderGames() {
       <div class="game-info">
         <div class="game-meta">${escapeHtml(platformLabel(game.platform))}</div>
         <div class="game-title">${escapeHtml(game.name)}</div>
-        <div class="status-pill">${escapeHtml(statusLabel(game.status))}</div>
+        <div class="status-pill ${escapeHtml(game.status)}">${escapeHtml(statusLabel(game.status))}</div>
         <div class="game-file">${escapeHtml(game.fileName || "Arquivo selecionado")}</div>
         <div class="game-actions">
           <button class="mini-button" data-action="cover" data-id="${escapeHtml(game.id)}">Capa</button>
@@ -243,7 +352,12 @@ function renderConsoles(consoles) {
       <em class="badge">${escapeHtml(item.tier)}</em>
     `;
     card.addEventListener("click", () => {
-      showToast(`${item.name}: motor ${item.status}.`);
+      libraryState.platform = item.id;
+      document.querySelector("#filterPlatform").value = item.id;
+      saveLibraryState();
+      openTab("games");
+      renderGames();
+      showToast(`Filtro aplicado: ${item.name}.`);
     });
     grid.appendChild(card);
   });
@@ -300,10 +414,63 @@ function setupProfiles() {
   }
 }
 
-function fillPlatformSelect(select) {
-  select.innerHTML = platformOptions.map((item) => (
-    `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)} — ${escapeHtml(item.exts)}</option>`
+function fillPlatformSelect(select, includeAll = false) {
+  const options = includeAll
+    ? [{ id: "all", label: "Todos os consoles", exts: "biblioteca" }, ...platformOptions]
+    : platformOptions;
+
+  select.innerHTML = options.map((item) => (
+    `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}${includeAll && item.id === "all" ? "" : " — " + escapeHtml(item.exts)}</option>`
   )).join("");
+}
+
+function setupLibraryTools() {
+  const search = document.querySelector("#gameSearch");
+  const platform = document.querySelector("#filterPlatform");
+  const status = document.querySelector("#filterStatus");
+  const sort = document.querySelector("#sortMode");
+
+  fillPlatformSelect(platform, true);
+
+  search.value = libraryState.search;
+  platform.value = libraryState.platform;
+  status.value = libraryState.status;
+  sort.value = libraryState.sort;
+
+  search.addEventListener("input", () => {
+    libraryState.search = search.value;
+    saveLibraryState();
+    renderGames();
+  });
+
+  platform.addEventListener("change", () => {
+    libraryState.platform = platform.value;
+    saveLibraryState();
+    renderGames();
+  });
+
+  status.addEventListener("change", () => {
+    libraryState.status = status.value;
+    saveLibraryState();
+    renderGames();
+  });
+
+  sort.addEventListener("change", () => {
+    libraryState.sort = sort.value;
+    saveLibraryState();
+    renderGames();
+  });
+
+  document.querySelector("#clearFiltersBtn").addEventListener("click", () => {
+    libraryState = { search: "", platform: "all", status: "all", sort: "recent" };
+    search.value = "";
+    platform.value = "all";
+    status.value = "all";
+    sort.value = "recent";
+    saveLibraryState();
+    renderGames();
+    showToast("Filtros limpos.");
+  });
 }
 
 function setupDraft() {
@@ -329,7 +496,13 @@ function setupDraft() {
     addOrUpdateGame(game);
     draftGame = null;
     document.querySelector("#gameDraft").classList.add("hidden");
+    libraryState.platform = "all";
+    libraryState.search = "";
+    saveLibraryState();
+    document.querySelector("#gameSearch").value = "";
+    document.querySelector("#filterPlatform").value = "all";
     openTab("games");
+    renderGames();
     showToast("Jogo salvo em Meus Jogos.");
   });
 
@@ -402,7 +575,7 @@ function openProfile(gameId) {
   document.querySelector("#profileFileInfo").textContent = `Arquivo: ${game.fileName}. Console: ${platformLabel(game.platform)}. Motor interno ainda futuro.`;
 
   const preview = document.querySelector("#profileCoverPreview");
-  preview.innerHTML = coverHtml(game, true);
+  preview.innerHTML = coverHtml(game);
 
   const sheet = document.querySelector("#profileSheet");
   sheet.classList.remove("hidden");
@@ -479,6 +652,7 @@ window.CompanionDeckUI = {
 async function boot() {
   setupTabs();
   setupProfiles();
+  setupLibraryTools();
   setupDraft();
   setupProfileSheet();
   setupActions();

@@ -12,13 +12,13 @@
       <div class="hero-top">
         <div class="brand-mark">CD</div>
         <div>
-          <p class="eyebrow">v0.3 • perfil do jogo</p>
+          <p class="eyebrow">v0.4 • biblioteca local</p>
           <h1>Companion Deck</h1>
         </div>
       </div>
       <p class="hero-copy">
-        Central gamer offline-first para organizar jogos próprios, capas locais,
-        perfis de console, notas, status de teste e motores de emulação futuros.
+        Central gamer offline-first com biblioteca local, busca, filtros, status,
+        notas e preparação para motores de emulação futuros.
       </p>
 
       <div class="status-grid">
@@ -80,10 +80,57 @@
         <p class="section-label">Central local</p>
         <h2>Meus Jogos</h2>
       </div>
+
+      <section class="dashboard-grid" aria-label="Resumo da biblioteca">
+        <article class="dash-card">
+          <span>Total</span>
+          <strong id="dashTotal">0</strong>
+        </article>
+        <article class="dash-card">
+          <span>Jogáveis</span>
+          <strong id="dashPlayable">0</strong>
+        </article>
+        <article class="dash-card">
+          <span>Travando</span>
+          <strong id="dashLagging">0</strong>
+        </article>
+      </section>
+
+      <section id="consoleCounters" class="chip-row" aria-label="Contadores por console"></section>
+
+      <section class="library-tools" aria-label="Ferramentas da biblioteca">
+        <input id="gameSearch" class="text-field search-field" type="search" placeholder="Buscar jogo salvo..." autocomplete="off">
+        <div class="tool-row">
+          <select id="filterPlatform" class="text-field mini-select"></select>
+          <select id="filterStatus" class="text-field mini-select">
+            <option value="all">Todos os status</option>
+            <option value="not-tested">Não testado</option>
+            <option value="playable">Jogável</option>
+            <option value="lagging">Travando</option>
+            <option value="finished">Finalizado</option>
+          </select>
+        </div>
+        <div class="tool-row">
+          <select id="sortMode" class="text-field mini-select">
+            <option value="recent">Mais recentes</option>
+            <option value="name">Nome A-Z</option>
+            <option value="status">Status</option>
+            <option value="platform">Console</option>
+          </select>
+          <button id="clearFiltersBtn" class="soft-small">Limpar filtros</button>
+        </div>
+      </section>
+
       <div id="emptyGames" class="empty-state">
         <strong>Nenhum jogo salvo ainda.</strong>
         <p>Toque em “Adicionar jogo”, escolha o arquivo no dispositivo e salve o card. A ROM/ISO não é copiada para dentro do app.</p>
       </div>
+
+      <div id="emptyFilteredGames" class="empty-state hidden">
+        <strong>Nenhum resultado encontrado.</strong>
+        <p>Tente limpar filtros, mudar o console ou buscar por outro nome.</p>
+      </div>
+
       <div id="gameGrid" class="game-grid"></div>
     </section>
 
@@ -102,7 +149,7 @@
       </div>
       <div id="codeList" class="stack-list"></div>
       <div class="empty-note">
-        Nesta base v0.3, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
+        Nesta base v0.4, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
         sempre usando formatos compatíveis e sem injeção.
       </div>
     </section>
@@ -190,6 +237,9 @@
         <button id="profileSaveBtn" class="solid-small">Salvar alterações</button>
         <button id="profileOpenExternalBtn" class="soft-small">Abrir externo</button>
       </div>
+      <p class="mini-warning">
+        Abrir externo tenta enviar o arquivo para outro app compatível instalado. Não executa emulação interna no Companion Deck ainda.
+      </p>
     </article>
   </section>
 

@@ -63,7 +63,9 @@ button {
 .empty-note,
 .empty-state,
 .game-card,
-.sheet-card {
+.sheet-card,
+.dash-card,
+.library-tools {
   background: rgba(17, 23, 19, 0.96);
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -134,7 +136,8 @@ h3 {
 
 .status-grid,
 .console-grid,
-.game-grid {
+.game-grid,
+.dashboard-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
@@ -151,7 +154,8 @@ h3 {
 .link-button,
 .solid-small,
 .soft-small,
-.icon-button {
+.icon-button,
+.filter-chip {
   border-radius: 18px;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -165,7 +169,8 @@ h3 {
 .status-card span,
 .console-card span,
 .primary-action small,
-.game-meta {
+.game-meta,
+.dash-card span {
   display: block;
   color: var(--muted);
   font-size: 0.82rem;
@@ -213,7 +218,8 @@ h3 {
   color: var(--text);
 }
 
-.draft-card {
+.draft-card,
+.library-tools {
   padding: 16px;
   margin-bottom: 14px;
 }
@@ -245,6 +251,10 @@ h3 {
   min-height: 48px;
 }
 
+.search-field {
+  margin-bottom: 10px;
+}
+
 .text-area {
   min-height: 110px;
   padding-top: 12px;
@@ -256,7 +266,8 @@ h3 {
   border-color: rgba(163, 230, 53, 0.68);
 }
 
-.hint {
+.hint,
+.mini-warning {
   margin: 12px 0 0;
   color: var(--muted);
   line-height: 1.45;
@@ -264,11 +275,21 @@ h3 {
   word-break: break-word;
 }
 
-.button-row {
+.mini-warning {
+  font-size: 0.78rem;
+  color: #cbd5c0;
+}
+
+.button-row,
+.tool-row {
   display: grid;
   grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 14px;
+}
+
+.tool-row {
+  margin-top: 8px;
 }
 
 .solid-small {
@@ -332,6 +353,49 @@ h3 {
 
 .section-heading {
   padding: 8px 2px 2px;
+}
+
+.dashboard-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 10px;
+}
+
+.dash-card {
+  padding: 13px;
+}
+
+.dash-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.28rem;
+  letter-spacing: -0.05em;
+}
+
+.chip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 0 10px;
+  padding-bottom: 3px;
+  scrollbar-width: none;
+}
+
+.chip-row::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-chip {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.filter-chip.active {
+  color: #111713;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
 }
 
 .console-card {
@@ -470,6 +534,21 @@ h3 {
   font-weight: 900;
 }
 
+.status-pill.playable {
+  background: rgba(34, 197, 94, 0.12);
+  color: #bbf7d0;
+}
+
+.status-pill.lagging {
+  background: rgba(239, 68, 68, 0.10);
+  color: #fecaca;
+}
+
+.status-pill.finished {
+  background: rgba(163, 230, 53, 0.13);
+  color: #d9f99d;
+}
+
 .game-actions {
   display: flex;
   flex-wrap: wrap;
@@ -550,7 +629,7 @@ h3 {
 }
 
 .sheet-actions {
-  margin-bottom: calc(6px + var(--safe-bottom));
+  margin-bottom: 4px;
 }
 
 @media (min-width: 620px) {
@@ -563,7 +642,8 @@ h3 {
     grid-template-columns: 2fr 1fr;
   }
 
-  .button-row {
+  .button-row,
+  .tool-row {
     grid-template-columns: 2fr 1fr;
   }
 
