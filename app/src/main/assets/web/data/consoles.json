@@ -16,6 +16,22 @@
     "description": "Sistema clássico, bom para modo Lite e catálogo inicial."
   },
   {
+    "id": "gbc",
+    "name": "Game Boy / Color",
+    "tier": "Leve",
+    "status": "planejado",
+    "extensions": ".gb, .gbc",
+    "description": "Sistema leve para catálogo inicial e testes rápidos."
+  },
+  {
+    "id": "megadrive",
+    "name": "Mega Drive",
+    "tier": "Leve",
+    "status": "planejado",
+    "extensions": ".md, .gen, .smd",
+    "description": "Console clássico leve para fase inicial."
+  },
+  {
     "id": "psp",
     "name": "Portátil PSP",
     "tier": "Avançado",

@@ -12,13 +12,13 @@
       <div class="hero-top">
         <div class="brand-mark">CD</div>
         <div>
-          <p class="eyebrow">v0.1 • base leve</p>
+          <p class="eyebrow">v0.2 • graphite lime</p>
           <h1>Companion Deck</h1>
         </div>
       </div>
       <p class="hero-copy">
-        Central gamer offline-first para organizar jogos próprios, perfis de console,
-        Code Deck e motores de emulação futuros sem distribuir ROMs, ISOs ou BIOS.
+        Central gamer offline-first para organizar jogos próprios, capas locais,
+        perfis de console, Code Deck e motores de emulação futuros.
       </p>
 
       <div class="status-grid">
@@ -47,20 +47,47 @@
       </button>
     </section>
 
-    <section id="lastPicked" class="picked hidden">
-      <p class="section-label">Último arquivo selecionado</p>
-      <h2 id="pickedName">Jogo</h2>
-      <p id="pickedHint">Aguardando seleção.</p>
+    <section id="gameDraft" class="draft-card hidden">
+      <div class="section-heading tight">
+        <p class="section-label">Novo jogo</p>
+        <h2>Conferir antes de salvar</h2>
+      </div>
+
+      <label class="field-label" for="draftName">Nome do jogo</label>
+      <input id="draftName" class="text-field" type="text" autocomplete="off">
+
+      <label class="field-label" for="draftPlatform">Console / sistema</label>
+      <select id="draftPlatform" class="text-field"></select>
+
+      <p id="draftFileInfo" class="hint"></p>
+
+      <div class="button-row">
+        <button id="saveGameBtn" class="solid-small">Salvar em Meus Jogos</button>
+        <button id="cancelDraftBtn" class="soft-small">Cancelar</button>
+      </div>
     </section>
 
     <nav class="tabs" aria-label="Seções">
-      <button class="tab active" data-tab="consoles">Consoles</button>
+      <button class="tab active" data-tab="games">Meus Jogos</button>
+      <button class="tab" data-tab="consoles">Consoles</button>
       <button class="tab" data-tab="codes">Code Deck</button>
       <button class="tab" data-tab="credits">Créditos</button>
       <button class="tab" data-tab="rules">Regras</button>
     </nav>
 
-    <section id="tab-consoles" class="tab-panel active">
+    <section id="tab-games" class="tab-panel active">
+      <div class="section-heading">
+        <p class="section-label">Central local</p>
+        <h2>Meus Jogos</h2>
+      </div>
+      <div id="emptyGames" class="empty-state">
+        <strong>Nenhum jogo salvo ainda.</strong>
+        <p>Toque em “Adicionar jogo”, escolha o arquivo no dispositivo e salve o card. A ROM/ISO não é copiada para dentro do app.</p>
+      </div>
+      <div id="gameGrid" class="game-grid"></div>
+    </section>
+
+    <section id="tab-consoles" class="tab-panel">
       <div class="section-heading">
         <p class="section-label">Organização por sistema</p>
         <h2>Consoles</h2>
@@ -75,7 +102,7 @@
       </div>
       <div id="codeList" class="stack-list"></div>
       <div class="empty-note">
-        Nesta base v0.1, os códigos são placeholders. A aplicação real virá em fases futuras,
+        Nesta base v0.2, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
         sempre usando formatos compatíveis e sem injeção.
       </div>
     </section>
@@ -112,9 +139,10 @@
       <div class="legal-card">
         <p>
           O Companion Deck não fornece jogos, ROMs, ISOs ou BIOS. O usuário deve adicionar apenas
-          arquivos que possui legalmente. O Code Deck é voltado a jogos offline, treino e formatos
-          compatíveis com emuladores/cores. O app não injeta código, não altera memória de outros
-          aplicativos, não burla anti-cheat e não oferece suporte a cheats online.
+          arquivos que possui legalmente. As capas são adicionadas manualmente pelo jogador e ficam
+          salvas apenas como referência local. O Code Deck é voltado a jogos offline, treino e formatos
+          compatíveis. O app não injeta código, não altera memória de outros aplicativos, não burla
+          anti-cheat e não oferece suporte a cheats online.
         </p>
       </div>
     </section>

@@ -20,15 +20,18 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 701;
+    private static final int REQUEST_PICK_COVER = 702;
+
     private WebView webView;
+    private String pendingCoverGameId = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         Window window = getWindow();
-        window.setStatusBarColor(0xFF070A12);
-        window.setNavigationBarColor(0xFF070A12);
+        window.setStatusBarColor(0xFF070807);
+        window.setNavigationBarColor(0xFF070807);
 
         webView = new WebView(this);
         setContentView(webView);
@@ -52,8 +55,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && request != null) {
-                    Uri uri = request.getUrl();
-                    return handleExternalUrl(uri);
+                    return handleExternalUrl(request.getUrl());
                 }
                 return false;
             }
@@ -86,7 +88,7 @@ public class MainActivity extends Activity {
     public class NativeBridge {
         @JavascriptInterface
         public String getVersionName() {
-            return "v0.1";
+            return "v0.2";
         }
 
         @JavascriptInterface
@@ -97,9 +99,12 @@ public class MainActivity extends Activity {
                     Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                     intent.addCategory(Intent.CATEGORY_OPENABLE);
                     intent.setType("*/*");
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
                     intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
                             "application/octet-stream",
                             "application/zip",
+                            "application/x-zip-compressed",
                             "application/x-iso9660-image",
                             "application/x-cd-image"
                     });
@@ -107,6 +112,26 @@ public class MainActivity extends Activity {
                         startActivityForResult(intent, REQUEST_PICK_ROM);
                     } catch (Exception e) {
                         Toast.makeText(MainActivity.this, "Seletor de arquivos indisponível.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void pickCover(String gameId) {
+            pendingCoverGameId = gameId == null ? "" : gameId;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("image/*");
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    intent.addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+                    try {
+                        startActivityForResult(intent, REQUEST_PICK_COVER);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "Seletor de imagem indisponível.", Toast.LENGTH_SHORT).show();
                     }
                 }
             });
@@ -136,8 +161,7 @@ public class MainActivity extends Activity {
                 @Override
                 public void run() {
                     try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(safeUrl));
-                        startActivity(intent);
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(safeUrl)));
                     } catch (Exception e) {
                         Toast.makeText(MainActivity.this, "Não foi possível abrir o link.", Toast.LENGTH_SHORT).show();
                     }
@@ -160,17 +184,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_PICK_ROM && resultCode == RESULT_OK && data != null) {
-            Uri uri = data.getData();
-            if (uri == null) return;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
 
-            final int flags = data.getFlags()
-                    & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            try {
-                getContentResolver().takePersistableUriPermission(uri, flags & Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            } catch (Exception ignored) {
-            }
+        Uri uri = data.getData();
+        persistReadPermission(uri);
 
+        if (requestCode == REQUEST_PICK_ROM) {
             String displayName = getDisplayName(uri);
             String uriText = uri.toString();
             String platformGuess = guessPlatform(displayName);
@@ -179,12 +198,31 @@ public class MainActivity extends Activity {
                     + jsString(displayName) + ","
                     + jsString(uriText) + ","
                     + jsString(platformGuess) + ");";
+            runJs(js);
+            return;
+        }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                webView.evaluateJavascript(js, null);
-            } else {
-                webView.loadUrl("javascript:" + js);
-            }
+        if (requestCode == REQUEST_PICK_COVER) {
+            String js = "window.CompanionDeckUI && window.CompanionDeckUI.onCoverPicked("
+                    + jsString(pendingCoverGameId) + ","
+                    + jsString(uri.toString()) + ");";
+            pendingCoverGameId = "";
+            runJs(js);
+        }
+    }
+
+    private void persistReadPermission(Uri uri) {
+        try {
+            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void runJs(String js) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            webView.evaluateJavascript(js, null);
+        } else {
+            webView.loadUrl("javascript:" + js);
         }
     }
 
@@ -203,12 +241,8 @@ public class MainActivity extends Activity {
                 if (cursor != null) cursor.close();
             }
         }
-        if (result == null || result.trim().isEmpty()) {
-            result = uri.getLastPathSegment();
-        }
-        if (result == null || result.trim().isEmpty()) {
-            result = "Jogo selecionado";
-        }
+        if (result == null || result.trim().isEmpty()) result = uri.getLastPathSegment();
+        if (result == null || result.trim().isEmpty()) result = "Jogo selecionado";
         return result;
     }
 
