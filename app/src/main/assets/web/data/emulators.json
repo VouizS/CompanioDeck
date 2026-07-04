@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ppsspp",
+    "name": "PPSSPP",
+    "platforms": ["psp"],
+    "description": "Emulador oficial/referência para jogos de portátil PSP. O usuário fornece seus próprios arquivos .iso/.cso.",
+    "site": "https://www.ppsspp.org/",
+    "packages": ["org.ppsspp.ppsspp", "org.ppsspp.ppssppgold"]
+  },
+  {
+    "id": "dolphin",
+    "name": "Dolphin",
+    "platforms": ["cubewii"],
+    "description": "Referência para Cube/Wii. Requer aparelho 64-bit forte e configuração cuidadosa.",
+    "site": "https://dolphin-emu.org/",
+    "packages": ["org.dolphinemu.dolphinemu"]
+  },
+  {
+    "id": "retroarch",
+    "name": "RetroArch / Libretro",
+    "platforms": ["gba", "snes", "gbc", "megadrive", "nes", "n64"],
+    "description": "Frontend multi-core para sistemas clássicos. Bom caminho externo enquanto o Companion Deck não tem motor interno.",
+    "site": "https://www.retroarch.com/",
+    "packages": ["com.retroarch", "com.retroarch.aarch64"]
+  },
+  {
+    "id": "duckstation",
+    "name": "DuckStation",
+    "platforms": ["ps1"],
+    "description": "Referência para PS1. Pode exigir BIOS/arquivos próprios do usuário, dependendo do fluxo.",
+    "site": "https://www.duckstation.org/",
+    "packages": ["com.github.stenzek.duckstation"]
+  },
+  {
+    "id": "aethersx2",
+    "name": "AetherSX2 / opção PS2 instalada",
+    "platforms": ["ps2"],
+    "description": "PS2 é uma fase extrema/experimental e pode exigir BIOS própria do usuário. O Companion Deck não fornece BIOS.",
+    "site": "https://www.aethersx2.com/",
+    "packages": ["xyz.aethersx2.android"]
+  }
+]

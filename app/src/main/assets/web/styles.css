@@ -65,7 +65,10 @@ button {
 .game-card,
 .sheet-card,
 .dash-card,
-.library-tools {
+.library-tools,
+.launcher-hero,
+.launcher-card,
+.launcher-box {
   background: rgba(17, 23, 19, 0.96);
   border: 1px solid var(--line);
   border-radius: 24px;
@@ -170,7 +173,8 @@ h3 {
 .console-card span,
 .primary-action small,
 .game-meta,
-.dash-card span {
+.dash-card span,
+.launcher-card small {
   display: block;
   color: var(--muted);
   font-size: 0.82rem;
@@ -219,9 +223,51 @@ h3 {
 }
 
 .draft-card,
-.library-tools {
+.library-tools,
+.launcher-hero,
+.launcher-card,
+.launcher-box {
   padding: 16px;
   margin-bottom: 14px;
+}
+
+.launcher-hero p,
+.launcher-card p,
+.launcher-box p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.launcher-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.install-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 4px 0 10px;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: rgba(251, 191, 36, 0.10);
+  color: #fde68a;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.install-pill.ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #bbf7d0;
+}
+
+.launcher-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .tight {
@@ -643,7 +689,8 @@ h3 {
   }
 
   .button-row,
-  .tool-row {
+  .tool-row,
+  .launcher-actions {
     grid-template-columns: 2fr 1fr;
   }
 

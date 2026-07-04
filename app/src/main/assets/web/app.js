@@ -41,9 +41,15 @@ const fallbackConsoles = [
   { id: "psp", name: "Portátil PSP", tier: "Avançado", status: "futuro", extensions: ".iso, .cso", description: "Meta futura com motor/core compatível." }
 ];
 
+const fallbackEmulators = [
+  { id: "retroarch", name: "RetroArch / Libretro", platforms: ["gba", "snes", "gbc", "megadrive", "nes", "n64"], description: "Frontend multi-core para sistemas clássicos.", site: "https://www.retroarch.com/", packages: ["com.retroarch", "com.retroarch.aarch64"] },
+  { id: "ppsspp", name: "PPSSPP", platforms: ["psp"], description: "Referência para portátil PSP.", site: "https://www.ppsspp.org/", packages: ["org.ppsspp.ppsspp", "org.ppsspp.ppssppgold"] }
+];
+
 let draftGame = null;
 let activeProfileId = "";
 let libraryState = loadLibraryState();
+let emulatorCatalog = [];
 
 function native() {
   return window.CompanionDeckNative || null;
@@ -74,6 +80,21 @@ function openContentUri(uri) {
   const bridge = native();
   if (bridge && bridge.openContentUri) bridge.openContentUri(uri);
   else showToast("Abertura externa disponível apenas no APK.");
+}
+
+function launchPackage(packageName) {
+  const bridge = native();
+  if (bridge && bridge.launchPackage) bridge.launchPackage(packageName);
+}
+
+function isInstalled(packageName) {
+  const bridge = native();
+  if (!bridge || !bridge.isPackageInstalled) return false;
+  try {
+    return !!bridge.isPackageInstalled(packageName);
+  } catch (error) {
+    return false;
+  }
 }
 
 async function loadJson(path, fallback) {
@@ -194,6 +215,16 @@ function coverHtml(game) {
   return `<span>${escapeHtml(initials(game.name))}</span>`;
 }
 
+function emulatorsForPlatform(platform) {
+  if (!platform || platform === "manual") return emulatorCatalog;
+  return emulatorCatalog.filter((emu) => Array.isArray(emu.platforms) && emu.platforms.includes(platform));
+}
+
+function installedPackageForEmulator(emu) {
+  const packages = Array.isArray(emu.packages) ? emu.packages : [];
+  return packages.find((pkg) => isInstalled(pkg)) || "";
+}
+
 function filteredAndSortedGames() {
   const search = libraryState.search.trim().toLowerCase();
   let games = getGames().map(normalizeGame);
@@ -296,6 +327,7 @@ function renderGames() {
         <div class="status-pill ${escapeHtml(game.status)}">${escapeHtml(statusLabel(game.status))}</div>
         <div class="game-file">${escapeHtml(game.fileName || "Arquivo selecionado")}</div>
         <div class="game-actions">
+          <button class="mini-button" data-action="open" data-id="${escapeHtml(game.id)}">Abrir</button>
           <button class="mini-button" data-action="cover" data-id="${escapeHtml(game.id)}">Capa</button>
           <button class="mini-button" data-action="details" data-id="${escapeHtml(game.id)}">Perfil</button>
           <button class="mini-button danger" data-action="remove" data-id="${escapeHtml(game.id)}">Remover</button>
@@ -316,6 +348,11 @@ function handleGameAction(action, gameId) {
   const game = games.find((item) => item.id === gameId);
   if (!game) return;
 
+  if (action === "open") {
+    openGameAssist(game.id);
+    return;
+  }
+
   if (action === "cover") {
     const bridge = native();
     if (bridge && bridge.pickCover) bridge.pickCover(game.id);
@@ -334,6 +371,21 @@ function handleGameAction(action, gameId) {
     renderGames();
     showToast("Jogo removido.");
   }
+}
+
+function openGameAssist(gameId) {
+  const game = getGameById(gameId);
+  if (!game) return;
+  const emus = emulatorsForPlatform(game.platform);
+
+  if (emus.length === 0) {
+    showToast("Sem emulador recomendado para este console ainda. Tente Abrir com app compatível.");
+    openContentUri(game.fileUri);
+    return;
+  }
+
+  openProfile(game.id);
+  showToast("Abra com app compatível ou use a recomendação do Launcher.");
 }
 
 function renderConsoles(consoles) {
@@ -379,6 +431,86 @@ function renderCodes(codes) {
       copyText(item.title, item.code);
     });
     list.appendChild(card);
+  });
+}
+
+function renderLauncherList() {
+  const list = document.querySelector("#launcherList");
+  list.innerHTML = "";
+
+  emulatorCatalog.forEach((emu) => {
+    const installed = installedPackageForEmulator(emu);
+    const supported = Array.isArray(emu.platforms) ? emu.platforms.map(platformLabel).join(", ") : "Sistemas variados";
+    const card = document.createElement("article");
+    card.className = "launcher-card";
+    card.innerHTML = `
+      <h3>${escapeHtml(emu.name)}</h3>
+      <span class="install-pill ${installed ? "ok" : ""}">${installed ? "Instalado detectado" : "Não detectado / opcional"}</span>
+      <small>${escapeHtml(supported)}</small>
+      <p>${escapeHtml(emu.description)}</p>
+      <div class="launcher-actions">
+        <button class="solid-small" data-launch="${escapeHtml(installed)}" ${installed ? "" : "disabled"}>Abrir app instalado</button>
+        <button class="soft-small" data-site="${escapeHtml(emu.site)}">Site oficial</button>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll("[data-launch]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const pkg = button.dataset.launch;
+      if (pkg) launchPackage(pkg);
+    });
+  });
+
+  list.querySelectorAll("[data-site]").forEach((button) => {
+    button.addEventListener("click", () => openUrl(button.dataset.site));
+  });
+}
+
+function renderProfileLauncher(game) {
+  const box = document.querySelector("#profileLauncherBox");
+  const emus = emulatorsForPlatform(game.platform);
+
+  if (!emus.length) {
+    box.innerHTML = `
+      <strong>Launcher assistido</strong>
+      <p>Nenhum emulador recomendado para este sistema ainda. Use “Abrir com app compatível”.</p>
+    `;
+    return;
+  }
+
+  box.innerHTML = `
+    <strong>Launcher assistido</strong>
+    <p>Recomendação para ${escapeHtml(platformLabel(game.platform))}:</p>
+    <div class="stack-list compact-stack">
+      ${emus.map((emu) => {
+        const installed = installedPackageForEmulator(emu);
+        return `
+          <div class="launcher-mini">
+            <div>
+              <b>${escapeHtml(emu.name)}</b>
+              <span class="install-pill ${installed ? "ok" : ""}">${installed ? "Instalado" : "Opcional"}</span>
+            </div>
+            <div class="launcher-actions">
+              <button class="solid-small" data-profile-launch="${escapeHtml(installed)}" ${installed ? "" : "disabled"}>Abrir app</button>
+              <button class="soft-small" data-profile-site="${escapeHtml(emu.site)}">Site oficial</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  box.querySelectorAll("[data-profile-launch]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const pkg = button.dataset.profileLaunch;
+      if (pkg) launchPackage(pkg);
+    });
+  });
+
+  box.querySelectorAll("[data-profile-site]").forEach((button) => {
+    button.addEventListener("click", () => openUrl(button.dataset.profileSite));
   });
 }
 
@@ -576,6 +708,7 @@ function openProfile(gameId) {
 
   const preview = document.querySelector("#profileCoverPreview");
   preview.innerHTML = coverHtml(game);
+  renderProfileLauncher(game);
 
   const sheet = document.querySelector("#profileSheet");
   sheet.classList.remove("hidden");
@@ -657,13 +790,17 @@ async function boot() {
   setupProfileSheet();
   setupActions();
 
-  const [consoles, codes] = await Promise.all([
+  const [consoles, codes, emulators] = await Promise.all([
     loadJson("./data/consoles.json", fallbackConsoles),
-    loadJson("./data/codes.json", [])
+    loadJson("./data/codes.json", []),
+    loadJson("./data/emulators.json", fallbackEmulators)
   ]);
+
+  emulatorCatalog = emulators;
 
   renderConsoles(consoles);
   renderCodes(codes);
+  renderLauncherList();
   renderGames();
 }
 

@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.OpenableColumns;
@@ -74,7 +75,7 @@ public class MainActivity extends Activity {
     private boolean handleExternalUrl(Uri uri) {
         if (uri == null) return false;
         String scheme = uri.getScheme();
-        if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) {
+        if ("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme) || "market".equalsIgnoreCase(scheme)) {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, uri));
             } catch (Exception e) {
@@ -88,7 +89,7 @@ public class MainActivity extends Activity {
     public class NativeBridge {
         @JavascriptInterface
         public String getVersionName() {
-            return "v0.4";
+            return "v0.5";
         }
 
         @JavascriptInterface
@@ -138,6 +139,40 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public boolean isPackageInstalled(String packageName) {
+            if (packageName == null || packageName.trim().isEmpty()) return false;
+            try {
+                PackageManager pm = getPackageManager();
+                pm.getPackageInfo(packageName.trim(), 0);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        @JavascriptInterface
+        public void launchPackage(String packageName) {
+            if (packageName == null || packageName.trim().isEmpty()) return;
+            final String safePackage = packageName.trim();
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Intent launch = getPackageManager().getLaunchIntentForPackage(safePackage);
+                        if (launch != null) {
+                            startActivity(launch);
+                        } else {
+                            Toast.makeText(MainActivity.this, "App não encontrado no aparelho.", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "Não foi possível abrir o app.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void openContentUri(String uriText) {
             if (uriText == null || uriText.trim().isEmpty()) return;
             final String safeUri = uriText.trim();
@@ -150,7 +185,7 @@ public class MainActivity extends Activity {
                         Intent intent = new Intent(Intent.ACTION_VIEW);
                         intent.setDataAndType(uri, "*/*");
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        Intent chooser = Intent.createChooser(intent, "Abrir com");
+                        Intent chooser = Intent.createChooser(intent, "Abrir com emulador/app compatível");
                         startActivity(chooser);
                     } catch (Exception e) {
                         Toast.makeText(MainActivity.this, "Nenhum app compatível encontrado para abrir este arquivo.", Toast.LENGTH_LONG).show();

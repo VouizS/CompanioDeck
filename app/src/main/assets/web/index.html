@@ -12,13 +12,13 @@
       <div class="hero-top">
         <div class="brand-mark">CD</div>
         <div>
-          <p class="eyebrow">v0.4 • biblioteca local</p>
+          <p class="eyebrow">v0.5 • launcher assistido</p>
           <h1>Companion Deck</h1>
         </div>
       </div>
       <p class="hero-copy">
-        Central gamer offline-first com biblioteca local, busca, filtros, status,
-        notas e preparação para motores de emulação futuros.
+        Central gamer offline-first com biblioteca local, launcher assistido,
+        emuladores oficiais, status, notas e preparação para motores internos futuros.
       </p>
 
       <div class="status-grid">
@@ -69,6 +69,7 @@
 
     <nav class="tabs" aria-label="Seções">
       <button class="tab active" data-tab="games">Meus Jogos</button>
+      <button class="tab" data-tab="launcher">Launcher</button>
       <button class="tab" data-tab="consoles">Consoles</button>
       <button class="tab" data-tab="codes">Code Deck</button>
       <button class="tab" data-tab="credits">Créditos</button>
@@ -134,6 +135,21 @@
       <div id="gameGrid" class="game-grid"></div>
     </section>
 
+    <section id="tab-launcher" class="tab-panel">
+      <div class="section-heading">
+        <p class="section-label">Ponte assistida</p>
+        <h2>Launcher</h2>
+      </div>
+      <div class="launcher-hero">
+        <strong>Motor interno ainda não está ativo.</strong>
+        <p>
+          Nesta fase, o Companion Deck ajuda a abrir o arquivo salvo com um app compatível instalado,
+          ou redireciona para fontes oficiais dos emuladores.
+        </p>
+      </div>
+      <div id="launcherList" class="stack-list"></div>
+    </section>
+
     <section id="tab-consoles" class="tab-panel">
       <div class="section-heading">
         <p class="section-label">Organização por sistema</p>
@@ -149,7 +165,7 @@
       </div>
       <div id="codeList" class="stack-list"></div>
       <div class="empty-note">
-        Nesta base v0.4, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
+        Nesta base v0.5, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
         sempre usando formatos compatíveis e sem injeção.
       </div>
     </section>
@@ -231,11 +247,13 @@
       <label class="field-label" for="profileNotes">Notas do jogador</label>
       <textarea id="profileNotes" class="text-area" rows="4" placeholder="Ex: roda melhor no modo Lite, precisa testar áudio, configurar controle..."></textarea>
 
+      <div id="profileLauncherBox" class="launcher-box"></div>
+
       <p id="profileFileInfo" class="hint"></p>
 
       <div class="button-row sheet-actions">
         <button id="profileSaveBtn" class="solid-small">Salvar alterações</button>
-        <button id="profileOpenExternalBtn" class="soft-small">Abrir externo</button>
+        <button id="profileOpenExternalBtn" class="soft-small">Abrir com app compatível</button>
       </div>
       <p class="mini-warning">
         Abrir externo tenta enviar o arquivo para outro app compatível instalado. Não executa emulação interna no Companion Deck ainda.
