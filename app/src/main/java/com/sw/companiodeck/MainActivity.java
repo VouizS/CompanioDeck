@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
     public class NativeBridge {
         @JavascriptInterface
         public String getVersionName() {
-            return "v0.6";
+            return "v0.7";
         }
 
         @JavascriptInterface
@@ -185,7 +185,7 @@ public class MainActivity extends Activity {
                         Intent intent = new Intent(Intent.ACTION_VIEW);
                         intent.setDataAndType(uri, "*/*");
                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        Intent chooser = Intent.createChooser(intent, "Abrir com emulador/app compatível");
+                        Intent chooser = Intent.createChooser(intent, "Abrir em emulador/app compatível");
                         startActivity(chooser);
                     } catch (Exception e) {
                         Toast.makeText(MainActivity.this, "Nenhum app compatível encontrado para abrir este arquivo.", Toast.LENGTH_LONG).show();
@@ -332,7 +332,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        String js = "window.CompanionDeckUI && window.CompanionDeckUI.closeProfileIfOpen && window.CompanionDeckUI.closeProfileIfOpen();";
+        String js = "window.CompanionDeckUI && window.CompanionDeckUI.handleBack && window.CompanionDeckUI.handleBack();";
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             webView.evaluateJavascript(js, null);
         }

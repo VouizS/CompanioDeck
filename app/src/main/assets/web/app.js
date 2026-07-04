@@ -1,6 +1,7 @@
 const STORAGE_GAMES = "companionDeckGamesV2";
 const STORAGE_PROFILE = "companionDeckProfile";
 const STORAGE_LIBRARY_STATE = "companionDeckLibraryStateV4";
+const STORAGE_LAST_PLAYER = "companionDeckLastPlayerGame";
 
 const legalNotice = `O Companion Deck não fornece jogos, ROMs, ISOs ou BIOS.
 O usuário deve adicionar apenas arquivos que possui legalmente.
@@ -236,26 +237,13 @@ function filteredAndSortedGames() {
     });
   }
 
-  if (libraryState.platform !== "all") {
-    games = games.filter((game) => game.platform === libraryState.platform);
-  }
-
-  if (libraryState.status !== "all") {
-    games = games.filter((game) => game.status === libraryState.status);
-  }
+  if (libraryState.platform !== "all") games = games.filter((game) => game.platform === libraryState.platform);
+  if (libraryState.status !== "all") games = games.filter((game) => game.status === libraryState.status);
 
   games.sort((a, b) => {
-    if (libraryState.sort === "name") {
-      return a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
-    }
-    if (libraryState.sort === "status") {
-      return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99)
-        || a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
-    }
-    if (libraryState.sort === "platform") {
-      return platformLabel(a.platform).localeCompare(platformLabel(b.platform), "pt-BR", { sensitivity: "base" })
-        || a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
-    }
+    if (libraryState.sort === "name") return a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+    if (libraryState.sort === "status") return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99) || a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
+    if (libraryState.sort === "platform") return platformLabel(a.platform).localeCompare(platformLabel(b.platform), "pt-BR", { sensitivity: "base" }) || a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" });
     return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
   });
 
@@ -271,10 +259,7 @@ function renderDashboard(allGames) {
 function renderConsoleCounters(allGames) {
   const row = document.querySelector("#consoleCounters");
   const counts = new Map();
-
-  allGames.forEach((game) => {
-    counts.set(game.platform, (counts.get(game.platform) || 0) + 1);
-  });
+  allGames.forEach((game) => counts.set(game.platform, (counts.get(game.platform) || 0) + 1));
 
   const chips = [
     { id: "all", label: `Todos (${allGames.length})` },
@@ -310,6 +295,7 @@ function renderGames() {
 
   renderDashboard(allGames);
   renderConsoleCounters(allGames);
+  renderLastPlayerGame();
 
   grid.innerHTML = "";
   empty.classList.toggle("hidden", allGames.length > 0);
@@ -318,7 +304,6 @@ function renderGames() {
   games.forEach((game) => {
     const card = document.createElement("article");
     card.className = "game-card";
-
     card.innerHTML = `
       <div class="cover-box">${coverHtml(game)}</div>
       <div class="game-info">
@@ -334,7 +319,6 @@ function renderGames() {
         </div>
       </div>
     `;
-
     grid.appendChild(card);
   });
 
@@ -373,25 +357,9 @@ function handleGameAction(action, gameId) {
   }
 }
 
-function openGameAssist(gameId) {
-  const game = getGameById(gameId);
-  if (!game) return;
-  const emus = emulatorsForPlatform(game.platform);
-
-  if (emus.length === 0) {
-    showToast("Sem emulador recomendado para este console ainda. Tente Abrir com app compatível.");
-    openContentUri(game.fileUri);
-    return;
-  }
-
-  openProfile(game.id);
-  showToast("Abra com app compatível ou use a recomendação do Launcher.");
-}
-
 function renderConsoles(consoles) {
   const grid = document.querySelector("#consoleGrid");
   grid.innerHTML = "";
-
   consoles.forEach((item) => {
     const card = document.createElement("article");
     card.className = "console-card";
@@ -418,7 +386,6 @@ function renderConsoles(consoles) {
 function renderCodes(codes) {
   const list = document.querySelector("#codeList");
   list.innerHTML = "";
-
   codes.forEach((item) => {
     const card = document.createElement("article");
     card.className = "info-card";
@@ -427,9 +394,7 @@ function renderCodes(codes) {
       <p><strong>${escapeHtml(item.game)}</strong> • ${escapeHtml(item.format)}<br>${escapeHtml(item.description)}</p>
       <button class="link-button">Copiar exemplo</button>
     `;
-    card.querySelector("button").addEventListener("click", () => {
-      copyText(item.title, item.code);
-    });
+    card.querySelector("button").addEventListener("click", () => copyText(item.title, item.code));
     list.appendChild(card);
   });
 }
@@ -474,15 +439,15 @@ function renderProfileLauncher(game) {
 
   if (!emus.length) {
     box.innerHTML = `
-      <strong>Launcher assistido</strong>
-      <p>Nenhum emulador recomendado para este sistema ainda. Use “Abrir com app compatível”.</p>
+      <strong>Launcher externo</strong>
+      <p>Nenhum emulador recomendado para este sistema ainda. Use “Abrir em emulador externo”.</p>
     `;
     return;
   }
 
   box.innerHTML = `
-    <strong>Launcher assistido</strong>
-    <p>Recomendação para ${escapeHtml(platformLabel(game.platform))}:</p>
+    <strong>Launcher externo</strong>
+    <p>Fallback para ${escapeHtml(platformLabel(game.platform))}:</p>
     <div class="stack-list compact-stack">
       ${emus.map((emu) => {
         const installed = installedPackageForEmulator(emu);
@@ -514,60 +479,71 @@ function renderProfileLauncher(game) {
   });
 }
 
-
 function renderProfilePlayer(game) {
   const box = document.querySelector("#profilePlayerBox");
   if (!box) return;
   box.innerHTML = `
     <strong>Jogar no Companion Deck</strong>
-    <p>Este será o fluxo principal. Para ${escapeHtml(platformLabel(game.platform))}, o motor interno ainda está em preparação.</p>
+    <p>Fluxo principal. Abre a tela cheia do Player. Para ${escapeHtml(platformLabel(game.platform))}, o motor interno ainda está em preparação.</p>
     <div class="launcher-actions">
       <button class="solid-small" id="profilePlayInternalBtn">Jogar no Companion Deck</button>
       <button class="soft-small" id="profileExternalFallbackBtn">Abrir em emulador externo</button>
     </div>
   `;
-  const playBtn = box.querySelector("#profilePlayInternalBtn");
-  const fallbackBtn = box.querySelector("#profileExternalFallbackBtn");
-  if (playBtn) playBtn.addEventListener("click", () => openInternalPlayer(game.id));
-  if (fallbackBtn) fallbackBtn.addEventListener("click", () => openContentUri(game.fileUri));
+  box.querySelector("#profilePlayInternalBtn")?.addEventListener("click", () => openInternalPlayer(game.id));
+  box.querySelector("#profileExternalFallbackBtn")?.addEventListener("click", () => openContentUri(game.fileUri));
 }
 
 function openInternalPlayer(gameId) {
   const game = getGameById(gameId);
   if (!game) return;
 
-  const overlay = document.querySelector("#playerOverlay");
-  const title = document.querySelector("#playerTitle");
-  const system = document.querySelector("#playerSystem");
-  const message = document.querySelector("#playerMessage");
+  localStorage.setItem(STORAGE_LAST_PLAYER, game.id);
 
-  if (title) title.textContent = game.name;
-  if (system) system.textContent = platformLabel(game.platform);
-  if (message) message.textContent = "Player interno preparado. O motor/core real ainda será integrado em uma próxima fase.";
+  document.querySelector("#playerTitle").textContent = game.name;
+  document.querySelector("#playerSystem").textContent = platformLabel(game.platform);
+  document.querySelector("#playerMessage").textContent = "Player interno preparado. O motor/core real ainda será integrado em uma próxima fase.";
 
-  localStorage.setItem("companionDeckLastPlayerGame", game.id);
   renderLastPlayerGame();
+  closeProfile();
 
-  if (overlay) {
-    overlay.classList.remove("hidden");
-    overlay.setAttribute("aria-hidden", "false");
-  }
+  const overlay = document.querySelector("#playerOverlay");
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden", "false");
+
+  closePlayerSidebar(false);
 }
 
 function closeInternalPlayer() {
+  closePlayerSidebar(false);
   const overlay = document.querySelector("#playerOverlay");
-  if (overlay) {
-    overlay.classList.add("hidden");
-    overlay.setAttribute("aria-hidden", "true");
-  }
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden", "true");
+}
+
+function openPlayerSidebar() {
+  const sidebar = document.querySelector("#playerSidebar");
+  sidebar.classList.remove("hidden");
+  sidebar.setAttribute("aria-hidden", "false");
+}
+
+function closePlayerSidebar(showToastMsg = false) {
+  const sidebar = document.querySelector("#playerSidebar");
+  sidebar.classList.add("hidden");
+  sidebar.setAttribute("aria-hidden", "true");
+  if (showToastMsg) showToast("Menu fechado.");
+}
+
+function getLastPlayerGame() {
+  const id = localStorage.getItem(STORAGE_LAST_PLAYER) || "";
+  return getGameById(id);
 }
 
 function renderLastPlayerGame() {
   const box = document.querySelector("#playerLastGame");
   if (!box) return;
 
-  const id = localStorage.getItem("companionDeckLastPlayerGame") || "";
-  const game = getGameById(id);
+  const game = getLastPlayerGame();
   if (!game) {
     box.classList.add("hidden");
     return;
@@ -576,7 +552,7 @@ function renderLastPlayerGame() {
   box.classList.remove("hidden");
   box.innerHTML = `
     <strong>Último jogo preparado</strong>
-    <p>${escapeHtml(game.name)} - ${escapeHtml(platformLabel(game.platform))}</p>
+    <p>${escapeHtml(game.name)} • ${escapeHtml(platformLabel(game.platform))}</p>
     <div class="launcher-actions">
       <button class="solid-small" id="lastPlayerOpenBtn">Abrir tela Player</button>
       <button class="soft-small" id="lastPlayerExternalBtn">Abrir externo</button>
@@ -588,15 +564,28 @@ function renderLastPlayerGame() {
 }
 
 function setupInternalPlayer() {
-  document.querySelector("#closePlayerBtn")?.addEventListener("click", closeInternalPlayer);
-  document.querySelector("#playerBackLibraryBtn")?.addEventListener("click", () => {
+  document.querySelector("#playerMenuBtn")?.addEventListener("click", openPlayerSidebar);
+  document.querySelector("#closeSidebarBtn")?.addEventListener("click", () => closePlayerSidebar(true));
+  document.querySelector("#sidebarResumeBtn")?.addEventListener("click", () => closePlayerSidebar(true));
+
+  document.querySelector("#sidebarControlLayoutBtn")?.addEventListener("click", () => {
+    showToast("Configuração de layout será ligada ao core/motor real em fase futura.");
+  });
+
+  document.querySelector("#sidebarExternalBtn")?.addEventListener("click", () => {
+    const game = getLastPlayerGame();
+    if (game) openContentUri(game.fileUri);
+  });
+
+  document.querySelector("#sidebarLibraryBtn")?.addEventListener("click", () => {
     closeInternalPlayer();
     openTab("games");
   });
-  document.querySelector("#playerExternalBtn")?.addEventListener("click", () => {
-    const id = localStorage.getItem("companionDeckLastPlayerGame") || "";
-    const game = getGameById(id);
-    if (game) openContentUri(game.fileUri);
+
+  document.querySelector("#sidebarExitBtn")?.addEventListener("click", () => {
+    closeInternalPlayer();
+    openTab("games");
+    showToast("Player fechado.");
   });
 }
 
@@ -792,8 +781,7 @@ function openProfile(gameId) {
   document.querySelector("#profileNotes").value = game.notes || "";
   document.querySelector("#profileFileInfo").textContent = `Arquivo: ${game.fileName}. Console: ${platformLabel(game.platform)}. Motor interno ainda futuro.`;
 
-  const preview = document.querySelector("#profileCoverPreview");
-  preview.innerHTML = coverHtml(game);
+  document.querySelector("#profileCoverPreview").innerHTML = coverHtml(game);
   renderProfilePlayer(game);
   renderProfileLauncher(game);
 
@@ -805,6 +793,7 @@ function openProfile(gameId) {
 function closeProfile() {
   activeProfileId = "";
   const sheet = document.querySelector("#profileSheet");
+  if (!sheet) return;
   sheet.classList.add("hidden");
   sheet.setAttribute("aria-hidden", "true");
 }
@@ -860,9 +849,13 @@ window.CompanionDeckUI = {
     showToast("Capa adicionada.");
   },
 
-  closeProfileIfOpen() {
+  handleBack() {
+    if (!document.querySelector("#playerSidebar").classList.contains("hidden")) {
+      closePlayerSidebar();
+      return true;
+    }
     if (!document.querySelector("#playerOverlay").classList.contains("hidden")) {
-      closeInternalPlayer();
+      openPlayerSidebar();
       return true;
     }
     if (!document.querySelector("#profileSheet").classList.contains("hidden")) {
@@ -870,6 +863,10 @@ window.CompanionDeckUI = {
       return true;
     }
     return false;
+  },
+
+  closeProfileIfOpen() {
+    return this.handleBack();
   }
 };
 
@@ -894,6 +891,7 @@ async function boot() {
   renderCodes(codes);
   renderLauncherList();
   renderGames();
+  renderLastPlayerGame();
 }
 
 boot();
