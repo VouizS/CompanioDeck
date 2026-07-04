@@ -134,3 +134,20 @@ h3{margin-bottom:6px}
   .console-grid,.game-grid{grid-template-columns:repeat(2,1fr)}
   .sheet-card{margin-bottom:20px}
 }
+
+
+/* v0.8 Official Identity Pack */
+.brand-mark.official-mark {
+  overflow: hidden;
+  background: #f8f8f8;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+}
+.brand-mark.official-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+}
