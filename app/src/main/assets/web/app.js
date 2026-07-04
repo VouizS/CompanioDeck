@@ -52,6 +52,17 @@ let activeProfileId = "";
 let libraryState = loadLibraryState();
 let emulatorCatalog = [];
 
+const coreCatalog = [
+  { id:'gba', platform:'gba', name:'GBA Lite Core', status:'Primeiro candidato', tier:'Leve', progress:35, mode:'internal-planned', description:'Melhor candidato inicial para provar motor interno leve. ROM pequena, controles simples e boa chance de estabilidade.', playerMessage:'Core GBA planejado como primeiro motor interno experimental.' },
+  { id:'snes', platform:'snes', name:'SNES Classic Core', status:'Candidato leve', tier:'Leve', progress:30, mode:'internal-planned', description:'Candidato clássico para fase inicial. Exige cuidado com áudio, saves e compatibilidade.', playerMessage:'Core SNES planejado. Ainda não executa internamente nesta versão.' },
+  { id:'gbc', platform:'gbc', name:'GB/GBC Pocket Core', status:'Candidato leve', tier:'Leve', progress:25, mode:'internal-planned', description:'Bom para testes futuros de tela pequena, controles simples e modo econômico.', playerMessage:'Core Game Boy/Game Boy Color planejado para fase leve.' },
+  { id:'psp', platform:'psp', name:'PSP Bridge Core', status:'Fase avançada', tier:'Avançado', progress:12, mode:'external-first', description:'Meta futura com integração cuidadosa. Enquanto isso, PPSSPP segue como fallback recomendado.', playerMessage:'PSP será tratado como fase avançada. Por enquanto use fallback externo.' },
+  { id:'cubewii', platform:'cubewii', name:'Cube/Wii Bridge', status:'Fase extrema', tier:'Extremo', progress:8, mode:'external-first', description:'Depende de aparelho forte e integração complexa. Dolphin segue como referência externa.', playerMessage:'Cube/Wii exige fase extrema. Fallback externo recomendado por enquanto.' },
+  { id:'ps2', platform:'ps2', name:'PS2 Extreme Slot', status:'Fase extrema', tier:'Extremo', progress:5, mode:'external-first', description:'PS2 exige BIOS própria do usuário, aparelho forte e muito cuidado técnico. Não é prioridade inicial.', playerMessage:'PS2 fica em slot extremo. Sem motor interno nesta fase.' },
+  { id:'manual', platform:'manual', name:'Manual Slot', status:'Sem core definido', tier:'Manual', progress:0, mode:'unknown', description:'Use quando o app ainda não reconheceu o sistema. O jogador pode ajustar o console no perfil.', playerMessage:'Console manual. Defina o sistema no perfil para receber uma rota de core.' }
+];
+
+
 function native() {
   return window.CompanionDeckNative || null;
 }
@@ -502,7 +513,8 @@ function openInternalPlayer(gameId) {
 
   document.querySelector("#playerTitle").textContent = game.name;
   document.querySelector("#playerSystem").textContent = platformLabel(game.platform);
-  document.querySelector("#playerMessage").textContent = "Player interno preparado. O motor/core real ainda será integrado em uma próxima fase.";
+  const core = coreForPlatform(game.platform);
+  document.querySelector("#playerMessage").textContent = `${core.name}: ${core.playerMessage}`;
 
   renderLastPlayerGame();
   closeProfile();
@@ -588,6 +600,13 @@ function setupInternalPlayer() {
     showToast("Player fechado.");
   });
 }
+
+
+function coreForPlatform(platform){return coreCatalog.find(c=>c.platform===platform)||coreCatalog.find(c=>c.platform==='manual')}
+function coreTierClass(core){if(!core)return'warning';if(core.tier==='Extremo')return'extreme';if(core.mode==='external-first'||core.mode==='unknown')return'warning';return''}
+function coreModeLabel(core){if(!core)return'Manual';if(core.mode==='internal-planned')return'Motor interno planejado';if(core.mode==='external-first')return'Fallback externo primeiro';return'Definir manualmente'}
+function renderCoreManager(){const grid=document.querySelector('#coreManagerGrid');if(!grid)return;grid.innerHTML=coreCatalog.filter(c=>c.platform!=='manual').map(core=>`<article class="core-card"><div class="core-card-top"><div><p class="section-label">${escapeHtml(platformLabel(core.platform))}</p><h3>${escapeHtml(core.name)}</h3></div><span class="core-chip ${coreTierClass(core)}">${escapeHtml(core.tier)}</span></div><p>${escapeHtml(core.description)}</p><div class="core-status-row"><span class="core-chip ${coreTierClass(core)}">${escapeHtml(core.status)}</span><span class="core-chip warning">${escapeHtml(coreModeLabel(core))}</span></div><div class="core-progress"><span style="width:${Math.max(0,Math.min(100,core.progress))}%"></span></div></article>`).join('')}
+function renderProfileCoreStatus(game){const box=document.querySelector('#profileCoreBox');if(!box||!game)return;const core=coreForPlatform(game.platform);box.innerHTML=`<strong>Estado do motor interno</strong><p>${escapeHtml(core.description)}</p><div class="core-status-row"><span class="core-chip ${coreTierClass(core)}">${escapeHtml(core.name)}</span><span class="core-chip warning">${escapeHtml(coreModeLabel(core))}</span><span class="core-chip ${coreTierClass(core)}">${escapeHtml(core.progress)}% preparação</span></div>`}
 
 function setupTabs() {
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -783,6 +802,7 @@ function openProfile(gameId) {
 
   document.querySelector("#profileCoverPreview").innerHTML = coverHtml(game);
   renderProfilePlayer(game);
+  renderProfileCoreStatus(game);
   renderProfileLauncher(game);
 
   const sheet = document.querySelector("#profileSheet");
@@ -890,6 +910,7 @@ async function boot() {
   renderConsoles(consoles);
   renderCodes(codes);
   renderLauncherList();
+  renderCoreManager();
   renderGames();
   renderLastPlayerGame();
 }

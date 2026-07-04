@@ -12,12 +12,12 @@
       <div class="hero-top">
         <div class="brand-mark official-mark"><img src="./assets/companiondeck_official_icon.png" alt="Companion Deck"></div>
         <div>
-          <p class="eyebrow">v0.8 • identidade oficial</p>
+          <p class="eyebrow">v0.9 • core manager</p>
           <h1>Companion Deck</h1>
         </div>
       </div>
       <p class="hero-copy">
-        Central gamer offline-first com identidade oficial, biblioteca local, Player em tela cheia, sidebar oculta,
+        Central gamer offline-first com identidade oficial, biblioteca local, Core Manager, Player em tela cheia, sidebar oculta,
         launcher externo como fallback e arquitetura preparada para motores/core futuros.
       </p>
 
@@ -68,6 +68,7 @@
     <nav class="tabs" aria-label="Seções">
       <button class="tab active" data-tab="games">Meus Jogos</button>
       <button class="tab" data-tab="player">Player</button>
+      <button class="tab" data-tab="cores">Motores</button>
       <button class="tab" data-tab="launcher">Launcher</button>
       <button class="tab" data-tab="consoles">Consoles</button>
       <button class="tab" data-tab="codes">Code Deck</button>
@@ -141,6 +142,18 @@
       <div id="playerLastGame" class="player-info-card hidden"></div>
     </section>
 
+    <section id="tab-cores" class="tab-panel">
+      <div class="section-heading">
+        <p class="section-label">Arquitetura interna</p>
+        <h2>Core Manager</h2>
+      </div>
+      <div class="player-info-card">
+        <strong>Mapa dos motores internos futuros.</strong>
+        <p>Esta área organiza quais consoles serão candidatos a motor interno, quais continuam como fallback externo e quais exigem aparelho forte. Ainda não executa ROM internamente, mas prepara a lógica real do app.</p>
+      </div>
+      <div id="coreManagerGrid" class="core-manager-grid"></div>
+    </section>
+
     <section id="tab-launcher" class="tab-panel">
       <div class="section-heading">
         <p class="section-label">Opção secundária</p>
@@ -168,7 +181,7 @@
       </div>
       <div id="codeList" class="stack-list"></div>
       <div class="empty-note">
-        Nesta base v0.7, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
+        Nesta base v0.9, os códigos continuam como placeholders. A aplicação real virá em fases futuras,
         sempre usando formatos compatíveis e sem injeção.
       </div>
     </section>
@@ -251,6 +264,7 @@
       <textarea id="profileNotes" class="text-area" rows="4" placeholder="Ex: roda melhor no modo Lite, precisa testar áudio, configurar controle..."></textarea>
 
       <div id="profilePlayerBox" class="player-box"></div>
+      <div id="profileCoreBox" class="core-status-card"></div>
       <div id="profileLauncherBox" class="launcher-box"></div>
 
       <p id="profileFileInfo" class="hint"></p>
