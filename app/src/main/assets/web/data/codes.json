@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sample-psp",
+    "game": "Exemplo PSP",
+    "platform": "psp",
+    "format": "CWCheat",
+    "title": "Código de exemplo",
+    "description": "Placeholder para demonstrar o Code Deck. Não é aplicado automaticamente.",
+    "code": "_C0 Exemplo\n_L 0x00000000 0x00000000"
+  },
+  {
+    "id": "sample-gba",
+    "game": "Exemplo GBA",
+    "platform": "gba",
+    "format": "Code",
+    "title": "Código local",
+    "description": "Modelo para futura importação manual do usuário.",
+    "code": "0000-0000"
+  }
+]

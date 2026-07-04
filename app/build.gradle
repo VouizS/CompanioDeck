@@ -1,0 +1,31 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.sw.companiodeck'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.sw.companiodeck'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName 'v0.1'
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+  <title>Companion Deck</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div class="brand-mark">CD</div>
+        <div>
+          <p class="eyebrow">v0.1 • base leve</p>
+          <h1>Companion Deck</h1>
+        </div>
+      </div>
+      <p class="hero-copy">
+        Central gamer offline-first para organizar jogos próprios, perfis de console,
+        Code Deck e motores de emulação futuros sem distribuir ROMs, ISOs ou BIOS.
+      </p>
+
+      <div class="status-grid">
+        <button class="status-card active" data-profile="lite">
+          <span>Modo Lite</span>
+          <strong>Interface econômica</strong>
+        </button>
+        <button class="status-card" data-profile="balanced">
+          <span>Equilibrado</span>
+          <strong>Visual + desempenho</strong>
+        </button>
+        <button class="status-card" data-profile="advanced">
+          <span>Avançado</span>
+          <strong>Para aparelho forte</strong>
+        </button>
+      </div>
+    </section>
+
+    <section class="quick-actions">
+      <button id="pickRomBtn" class="primary-action">
+        <span>Adicionar jogo</span>
+        <small>Selecionar ROM/ISO do dispositivo</small>
+      </button>
+      <button id="copyNoticeBtn" class="ghost-action">
+        Copiar aviso legal
+      </button>
+    </section>
+
+    <section id="lastPicked" class="picked hidden">
+      <p class="section-label">Último arquivo selecionado</p>
+      <h2 id="pickedName">Jogo</h2>
+      <p id="pickedHint">Aguardando seleção.</p>
+    </section>
+
+    <nav class="tabs" aria-label="Seções">
+      <button class="tab active" data-tab="consoles">Consoles</button>
+      <button class="tab" data-tab="codes">Code Deck</button>
+      <button class="tab" data-tab="credits">Créditos</button>
+      <button class="tab" data-tab="rules">Regras</button>
+    </nav>
+
+    <section id="tab-consoles" class="tab-panel active">
+      <div class="section-heading">
+        <p class="section-label">Organização por sistema</p>
+        <h2>Consoles</h2>
+      </div>
+      <div id="consoleGrid" class="console-grid"></div>
+    </section>
+
+    <section id="tab-codes" class="tab-panel">
+      <div class="section-heading">
+        <p class="section-label">Consulta e importação futura</p>
+        <h2>Code Deck</h2>
+      </div>
+      <div id="codeList" class="stack-list"></div>
+      <div class="empty-note">
+        Nesta base v0.1, os códigos são placeholders. A aplicação real virá em fases futuras,
+        sempre usando formatos compatíveis e sem injeção.
+      </div>
+    </section>
+
+    <section id="tab-credits" class="tab-panel">
+      <div class="section-heading">
+        <p class="section-label">Transparência</p>
+        <h2>Motores & Fontes oficiais</h2>
+      </div>
+      <div class="stack-list">
+        <article class="info-card">
+          <h3>PPSSPP</h3>
+          <p>Referência futura para jogos de portátil PSP. Usar apenas fontes oficiais e respeitar licença.</p>
+          <button data-url="https://www.ppsspp.org/" class="link-button">Abrir site oficial</button>
+        </article>
+        <article class="info-card">
+          <h3>Dolphin</h3>
+          <p>Referência futura para Cube/Wii. Requer aparelho forte e integração cuidadosa.</p>
+          <button data-url="https://dolphin-emu.org/" class="link-button">Abrir site oficial</button>
+        </article>
+        <article class="info-card">
+          <h3>RetroArch / Libretro</h3>
+          <p>Referência de arquitetura com frontend e cores. Útil para pensar modularidade.</p>
+          <button data-url="https://www.retroarch.com/" class="link-button">Abrir site oficial</button>
+        </article>
+      </div>
+    </section>
+
+    <section id="tab-rules" class="tab-panel">
+      <div class="section-heading">
+        <p class="section-label">Uso responsável</p>
+        <h2>Avisos do projeto</h2>
+      </div>
+      <div class="legal-card">
+        <p>
+          O Companion Deck não fornece jogos, ROMs, ISOs ou BIOS. O usuário deve adicionar apenas
+          arquivos que possui legalmente. O Code Deck é voltado a jogos offline, treino e formatos
+          compatíveis com emuladores/cores. O app não injeta código, não altera memória de outros
+          aplicativos, não burla anti-cheat e não oferece suporte a cheats online.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

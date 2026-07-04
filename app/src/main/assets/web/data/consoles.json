@@ -1,0 +1,50 @@
+[
+  {
+    "id": "gba",
+    "name": "Game Boy Advance",
+    "tier": "Leve",
+    "status": "planejado",
+    "extensions": ".gba",
+    "description": "Primeiro candidato para motor interno por ser leve e ideal para prova de conceito."
+  },
+  {
+    "id": "snes",
+    "name": "SNES",
+    "tier": "Leve",
+    "status": "planejado",
+    "extensions": ".sfc, .smc",
+    "description": "Sistema clássico, bom para modo Lite e catálogo inicial."
+  },
+  {
+    "id": "psp",
+    "name": "Portátil PSP",
+    "tier": "Avançado",
+    "status": "futuro",
+    "extensions": ".iso, .cso",
+    "description": "Meta futura com motor/core compatível, respeitando licenças e créditos."
+  },
+  {
+    "id": "ps1",
+    "name": "PS1",
+    "tier": "Médio",
+    "status": "futuro",
+    "extensions": ".bin, .cue, .chd",
+    "description": "Sistema intermediário para fase posterior."
+  },
+  {
+    "id": "cubewii",
+    "name": "Cube/Wii",
+    "tier": "Pesado",
+    "status": "experimental futuro",
+    "extensions": ".iso, .gcm, .wbfs, .rvz",
+    "description": "Exige aparelho forte e motor específico. Não entra na primeira fase."
+  },
+  {
+    "id": "ps2",
+    "name": "Console PS2",
+    "tier": "Extremo",
+    "status": "experimental futuro",
+    "extensions": ".iso, .chd",
+    "description": "Meta avançada. Pode exigir BIOS própria do usuário e aparelho forte."
+  }
+]
