@@ -20,6 +20,9 @@ import eu.rekawek.coffeegb.core.serial.SerialEndpoint;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.util.Locale;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class CoffeeGbPlayerView extends View {
     private static final int GB_W = 160;
@@ -79,7 +82,7 @@ public class CoffeeGbPlayerView extends View {
                 status = "";
                 startLoop();
             } catch (Throwable t) {
-                status = "Não foi possível iniciar GB/GBC. Teste outra .gb/.gbc ou use Externo.";
+                status = "Não foi possível iniciar. Use .gb/.gbc ou .zip com uma ROM GB/GBC.";
                 postInvalidate();
             }
         }, "CoffeeGbLoader").start();
@@ -87,20 +90,44 @@ public class CoffeeGbPlayerView extends View {
 
     private File copyRomToCache(Uri uri) throws Exception {
         File outFile = new File(getContext().getCacheDir(), "companion_deck_gb_rom_" + System.currentTimeMillis() + ".gb");
+
+        // Primeiro tenta tratar como .zip. Se existir .gb/.gbc dentro, extrai somente a ROM real.
+        try (InputStream raw = getContext().getContentResolver().openInputStream(uri);
+             ZipInputStream zip = new ZipInputStream(raw)) {
+            if (raw != null) {
+                ZipEntry entry;
+                while ((entry = zip.getNextEntry()) != null) {
+                    String name = entry.getName() == null ? "" : entry.getName().toLowerCase(Locale.ROOT);
+                    if (!entry.isDirectory() && (name.endsWith(".gb") || name.endsWith(".gbc"))) {
+                        try (FileOutputStream out = new FileOutputStream(outFile)) {
+                            copyLimited(zip, out);
+                        }
+                        return outFile;
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+            // Arquivo provavelmente não é zip. Abaixo copiamos como ROM direta.
+        }
+
         try (InputStream in = getContext().getContentResolver().openInputStream(uri);
              FileOutputStream out = new FileOutputStream(outFile)) {
             if (in == null) throw new IllegalStateException("ROM indisponível");
-            byte[] buffer = new byte[16384];
-            int read;
-            long total = 0;
-            long limit = 16L * 1024L * 1024L;
-            while ((read = in.read(buffer)) != -1) {
-                total += read;
-                if (total > limit) throw new IllegalStateException("ROM acima do limite inicial");
-                out.write(buffer, 0, read);
-            }
+            copyLimited(in, out);
         }
         return outFile;
+    }
+
+    private void copyLimited(InputStream in, FileOutputStream out) throws Exception {
+        byte[] buffer = new byte[16384];
+        int read;
+        long total = 0;
+        long limit = 16L * 1024L * 1024L;
+        while ((read = in.read(buffer)) != -1) {
+            total += read;
+            if (total > limit) throw new IllegalStateException("ROM acima do limite inicial");
+            out.write(buffer, 0, read);
+        }
     }
 
     private void startLoop() {

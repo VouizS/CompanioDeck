@@ -10,8 +10,8 @@ android {
         applicationId 'com.sw.companiodeck'
         minSdk 23
         targetSdk 35
-        versionCode 14
-        versionName 'v1.1-r2'
+        versionCode 15
+        versionName 'v1.1-r3'
     }
 
     buildTypes {

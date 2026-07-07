@@ -36,7 +36,7 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.1-r2";
+    private static final String INTERNAL_VERSION = "v1.1-r3";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -314,8 +314,11 @@ public class MainActivity extends Activity {
         actions.setOrientation(LinearLayout.HORIZONTAL);
         actions.setPadding(0, dp(12), 0, 0);
 
-        Button play = btn("Jogar", true);
-        play.setOnClickListener(v -> openPlayer(g));
+        Button play = btn(isCoffeeGbSupported(g) ? "Jogar" : "Abrir", true);
+        play.setOnClickListener(v -> {
+            if (isCoffeeGbSupported(g)) openPlayer(g);
+            else showNoInternalCore(g);
+        });
         Button profile = btn("Perfil", false);
         profile.setOnClickListener(v -> showProfile(g));
         Button ext = btn("Externo", false);
@@ -337,7 +340,11 @@ public class MainActivity extends Activity {
 
         if (!games.isEmpty()) {
             Button b = btn("Abrir último jogo", true);
-            b.setOnClickListener(v -> openPlayer(games.get(0)));
+            b.setOnClickListener(v -> {
+                GameEntry latest = games.get(0);
+                if (isCoffeeGbSupported(latest)) openPlayer(latest);
+                else showNoInternalCore(latest);
+            });
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(56));
             lp.setMargins(dp(14), dp(8), dp(14), dp(8));
             content.addView(b, lp);
@@ -626,6 +633,10 @@ public class MainActivity extends Activity {
 
     private void openPlayer(GameEntry g) {
         activePlayerGame = g;
+        if (!isCoffeeGbSupported(g)) {
+            showNoInternalCore(g);
+            return;
+        }
         inPlayer = true;
         sidebarOpen = false;
 
