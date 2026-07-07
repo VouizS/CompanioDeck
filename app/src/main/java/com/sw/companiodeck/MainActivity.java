@@ -36,7 +36,7 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.1-r3";
+    private static final String INTERNAL_VERSION = "v1.1-r4";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -420,7 +420,24 @@ public class MainActivity extends Activity {
     private boolean isCoffeeGbSupported(GameEntry g) {
         if (g == null || g.platform == null) return false;
         String file = g.fileName == null ? "" : g.fileName.toLowerCase(Locale.ROOT);
-        return "gbc".equals(g.platform) && (file.endsWith(".gb") || file.endsWith(".gbc"));
+        boolean validGbFile = file.endsWith(".gb") || file.endsWith(".gbc") || file.endsWith(".zip");
+        return "gbc".equals(g.platform) && validGbFile;
+    }
+
+
+    private void showNoInternalCore(GameEntry g) {
+        String system = g == null ? "este sistema" : platformLabel(g.platform);
+        String file = g == null ? "" : g.fileName;
+
+        new AlertDialog.Builder(this)
+                .setTitle("Motor interno indisponível")
+                .setMessage("O Companion Deck só abre internamente sistemas que já têm motor real ligado. Agora o motor real disponível é Game Boy / Color para arquivos .gb, .gbc ou .zip contendo uma ROM GB/GBC.\n\nSistema atual: " + system + "\nArquivo: " + file)
+                .setPositiveButton("Abrir externo", (d, w) -> openExternal(g))
+                .setNeutralButton("Perfil", (d, w) -> {
+                    if (g != null) showProfile(g);
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
     }
 
     private void addGameControls(FrameLayout frame, CoffeeGbPlayerView view) {
@@ -643,17 +660,11 @@ public class MainActivity extends Activity {
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.BLACK);
 
-        if (isCoffeeGbSupported(g)) {
-            CoffeeGbPlayerView coffee = new CoffeeGbPlayerView(this);
-            activeCoffeeView = coffee;
-            frame.addView(coffee, new FrameLayout.LayoutParams(-1, -1));
-            coffee.loadGame(Uri.parse(g.uri), g.name);
-            addGameControls(frame, coffee);
-        } else {
-            NativeCoreSurface surface = new NativeCoreSurface(this);
-            surface.setSlotText(g.name, NativeCoreBridge.runtimeMessage(g.platform));
-            frame.addView(surface, new FrameLayout.LayoutParams(-1, -1));
-        }
+        CoffeeGbPlayerView coffee = new CoffeeGbPlayerView(this);
+        activeCoffeeView = coffee;
+        frame.addView(coffee, new FrameLayout.LayoutParams(-1, -1));
+        coffee.loadGame(Uri.parse(g.uri), g.name);
+        addGameControls(frame, coffee);
 
         Button menu = btn("☰", false);
         menu.setTextSize(22);
