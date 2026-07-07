@@ -33,10 +33,12 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.1-r4";
+    private static final String INTERNAL_VERSION = "v1.1-r5";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -441,6 +443,10 @@ public class MainActivity extends Activity {
     }
 
     private void addGameControls(FrameLayout frame, CoffeeGbPlayerView view) {
+        if (frame.findViewWithTag("realControls") != null) return;
+        FrameLayout layer = new FrameLayout(this);
+        layer.setTag("realControls");
+        frame.addView(layer, new FrameLayout.LayoutParams(-1, -1));
         LinearLayout dpad = new LinearLayout(this);
         dpad.setOrientation(LinearLayout.VERTICAL);
         dpad.setGravity(Gravity.CENTER);
@@ -464,7 +470,7 @@ public class MainActivity extends Activity {
 
         FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(dp(170), dp(170), Gravity.BOTTOM | Gravity.LEFT);
         dlp.setMargins(dp(18), 0, 0, dp(34));
-        frame.addView(dpad, dlp);
+        layer.addView(dpad, dlp);
 
         LinearLayout ab = new LinearLayout(this);
         ab.setOrientation(LinearLayout.HORIZONTAL);
@@ -473,7 +479,7 @@ public class MainActivity extends Activity {
         ab.addView(controlButton("A", view, eu.rekawek.coffeegb.core.joypad.Button.A), new LinearLayout.LayoutParams(dp(64), dp(64)));
         FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(dp(150), dp(80), Gravity.BOTTOM | Gravity.RIGHT);
         alp.setMargins(0, 0, dp(22), dp(62));
-        frame.addView(ab, alp);
+        layer.addView(ab, alp);
 
         LinearLayout startSelect = new LinearLayout(this);
         startSelect.setOrientation(LinearLayout.HORIZONTAL);
@@ -482,7 +488,7 @@ public class MainActivity extends Activity {
         startSelect.addView(controlButton("START", view, eu.rekawek.coffeegb.core.joypad.Button.START), new LinearLayout.LayoutParams(dp(94), dp(42)));
         FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(dp(210), dp(52), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         slp.setMargins(0, 0, 0, dp(18));
-        frame.addView(startSelect, slp);
+        layer.addView(startSelect, slp);
     }
 
     private Button controlButton(String label, CoffeeGbPlayerView view, eu.rekawek.coffeegb.core.joypad.Button gbButton) {
@@ -533,7 +539,7 @@ public class MainActivity extends Activity {
         g.name = cleanName(fileName);
         g.fileName = fileName;
         g.uri = uri.toString();
-        g.platform = guessPlatform(fileName);
+        g.platform = guessPlatform(fileName, uri);
         g.status = "not-tested";
         g.notes = "";
         g.updatedAt = System.currentTimeMillis();
@@ -568,9 +574,10 @@ public class MainActivity extends Activity {
         return name.isEmpty() ? "Jogo" : name;
     }
 
-    private String guessPlatform(String fileName) {
+    private String guessPlatform(String fileName, Uri uri) {
         String lower = fileName == null ? "" : fileName.toLowerCase(Locale.ROOT);
         if (lower.endsWith(".gb") || lower.endsWith(".gbc")) return "gbc";
+        if (lower.endsWith(".zip") && zipContainsGbRom(uri)) return "gbc";
         if (lower.endsWith(".gba")) return "gba";
         if (lower.endsWith(".sfc") || lower.endsWith(".smc")) return "snes";
         if (lower.endsWith(".cso")) return "psp";
@@ -578,6 +585,23 @@ public class MainActivity extends Activity {
         if (lower.endsWith(".gcm") || lower.endsWith(".wbfs") || lower.endsWith(".rvz")) return "cubewii";
         if (lower.endsWith(".iso")) return "manual";
         return "manual";
+    }
+
+    private boolean zipContainsGbRom(Uri uri) {
+        if (uri == null) return false;
+        try (InputStream raw = getContentResolver().openInputStream(uri);
+             ZipInputStream zip = raw == null ? null : new ZipInputStream(raw)) {
+            if (zip == null) return false;
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                String name = entry.getName() == null ? "" : entry.getName().toLowerCase(Locale.ROOT);
+                if (!entry.isDirectory() && (name.endsWith(".gb") || name.endsWith(".gbc"))) {
+                    return true;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
     }
 
     private void showProfile(GameEntry g) {
@@ -663,8 +687,10 @@ public class MainActivity extends Activity {
         CoffeeGbPlayerView coffee = new CoffeeGbPlayerView(this);
         activeCoffeeView = coffee;
         frame.addView(coffee, new FrameLayout.LayoutParams(-1, -1));
+        coffee.setOnFirstFrameListener(() -> runOnUiThread(() -> {
+            if (coffee == activeCoffeeView) addGameControls(frame, coffee);
+        }));
         coffee.loadGame(Uri.parse(g.uri), g.name);
-        addGameControls(frame, coffee);
 
         Button menu = btn("☰", false);
         menu.setTextSize(22);

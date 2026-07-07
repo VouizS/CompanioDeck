@@ -35,6 +35,8 @@ public class CoffeeGbPlayerView extends View {
 
     private volatile boolean running;
     private volatile boolean hasFrame;
+    private Runnable onFirstFrameListener;
+
     private volatile String status = "Carregando core GB/GBC...";
     private Thread emuThread;
     private EventBusImpl eventBus;
@@ -43,6 +45,10 @@ public class CoffeeGbPlayerView extends View {
     public CoffeeGbPlayerView(Context context) {
         super(context);
         setBackgroundColor(Color.BLACK);
+    }
+
+    public void setOnFirstFrameListener(Runnable listener) {
+        this.onFirstFrameListener = listener;
     }
 
     public void loadGame(Uri uri, String title) {
@@ -82,7 +88,8 @@ public class CoffeeGbPlayerView extends View {
                 status = "";
                 startLoop();
             } catch (Throwable t) {
-                status = "Não foi possível iniciar. Use .gb/.gbc ou .zip com uma ROM GB/GBC.";
+                String detail = t.getMessage() == null ? t.getClass().getSimpleName() : t.getClass().getSimpleName() + ": " + t.getMessage();
+                status = "Falha real do core: " + detail;
                 postInvalidate();
             }
         }, "CoffeeGbLoader").start();
@@ -91,12 +98,14 @@ public class CoffeeGbPlayerView extends View {
     private File copyRomToCache(Uri uri) throws Exception {
         File outFile = new File(getContext().getCacheDir(), "companion_deck_gb_rom_" + System.currentTimeMillis() + ".gb");
 
-        // Primeiro tenta tratar como .zip. Se existir .gb/.gbc dentro, extrai somente a ROM real.
+        boolean lookedLikeZip = false;
+
         try (InputStream raw = getContext().getContentResolver().openInputStream(uri);
-             ZipInputStream zip = new ZipInputStream(raw)) {
-            if (raw != null) {
+             ZipInputStream zip = raw == null ? null : new ZipInputStream(raw)) {
+            if (zip != null) {
                 ZipEntry entry;
                 while ((entry = zip.getNextEntry()) != null) {
+                    lookedLikeZip = true;
                     String name = entry.getName() == null ? "" : entry.getName().toLowerCase(Locale.ROOT);
                     if (!entry.isDirectory() && (name.endsWith(".gb") || name.endsWith(".gbc"))) {
                         try (FileOutputStream out = new FileOutputStream(outFile)) {
@@ -106,8 +115,12 @@ public class CoffeeGbPlayerView extends View {
                     }
                 }
             }
-        } catch (Throwable ignored) {
-            // Arquivo provavelmente não é zip. Abaixo copiamos como ROM direta.
+        } catch (java.util.zip.ZipException ignored) {
+            // Não é zip. Abaixo copia como ROM direta.
+        }
+
+        if (lookedLikeZip) {
+            throw new IllegalStateException("ZIP sem arquivo .gb/.gbc dentro");
         }
 
         try (InputStream in = getContext().getContentResolver().openInputStream(uri);
@@ -128,6 +141,7 @@ public class CoffeeGbPlayerView extends View {
             if (total > limit) throw new IllegalStateException("ROM acima do limite inicial");
             out.write(buffer, 0, read);
         }
+    }
     }
 
     private void startLoop() {
@@ -160,11 +174,19 @@ public class CoffeeGbPlayerView extends View {
     }
 
     private void pushFrame(int[] rgb) {
+        boolean firstFrame;
         synchronized (frameLock) {
+            firstFrame = !hasFrame;
             for (int i = 0; i < latestFrame.length && i < rgb.length; i++) {
                 latestFrame[i] = 0xFF000000 | (rgb[i] & 0x00FFFFFF);
             }
             hasFrame = true;
+        }
+        if (firstFrame && onFirstFrameListener != null) {
+            try {
+                onFirstFrameListener.run();
+            } catch (Throwable ignored) {
+            }
         }
         postInvalidate();
     }
@@ -189,6 +211,7 @@ public class CoffeeGbPlayerView extends View {
         gameboy = null;
         eventBus = null;
         emuThread = null;
+        onFirstFrameListener = null;
     }
 
     @Override
