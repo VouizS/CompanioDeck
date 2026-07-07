@@ -8,8 +8,8 @@ import android.view.SurfaceView;
 
 public class NativeCoreSurface extends SurfaceView {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private String title = "Native Runtime Slot";
-    private String subtitle = "Surface pronta para render nativo/offline.";
+    private String title = "Companion Deck";
+    private String subtitle = "Player interno preparado.";
 
     public NativeCoreSurface(Context context) {
         super(context);
@@ -18,7 +18,7 @@ public class NativeCoreSurface extends SurfaceView {
     }
 
     public void setSlotText(String title, String subtitle) {
-        this.title = title == null ? "Native Runtime Slot" : title;
+        this.title = title == null ? "Companion Deck" : title;
         this.subtitle = subtitle == null ? "" : subtitle;
         invalidate();
     }
@@ -29,27 +29,24 @@ public class NativeCoreSurface extends SurfaceView {
         int w = getWidth();
         int h = getHeight();
 
-        paint.setColor(Color.rgb(3, 4, 3));
+        paint.setColor(Color.BLACK);
         canvas.drawRect(0, 0, w, h, paint);
 
-        paint.setColor(Color.argb(32, 163, 230, 53));
-        canvas.drawCircle(w / 2f, h / 2f, Math.min(w, h) * 0.34f, paint);
+        paint.setColor(Color.argb(28, 46, 123, 255));
+        canvas.drawCircle(w * 0.48f, h * 0.42f, Math.min(w, h) * 0.36f, paint);
+
+        paint.setColor(Color.argb(24, 112, 77, 255));
+        canvas.drawCircle(w * 0.62f, h * 0.56f, Math.min(w, h) * 0.28f, paint);
 
         paint.setTextAlign(Paint.Align.CENTER);
         paint.setFakeBoldText(true);
-        paint.setTextSize(Math.max(26f, w * 0.052f));
-        paint.setColor(Color.rgb(244, 247, 239));
-        canvas.drawText(title, w / 2f, h / 2f - 12f, paint);
+        paint.setTextSize(Math.max(28f, w * 0.058f));
+        paint.setColor(Color.rgb(248, 250, 252));
+        canvas.drawText(title, w / 2f, h / 2f - 8f, paint);
 
         paint.setFakeBoldText(false);
-        paint.setTextSize(Math.max(15f, w * 0.026f));
-        paint.setColor(Color.rgb(164, 173, 157));
-        canvas.drawText(subtitle, w / 2f, h / 2f + 26f, paint);
-
-        paint.setFakeBoldText(true);
-        paint.setTextSize(Math.max(12f, w * 0.022f));
-        paint.setColor(Color.rgb(217, 249, 157));
-        canvas.drawText("NO WEB CORE • NATIVE FOUNDATION", w / 2f, h - 42f, paint);
-        paint.setFakeBoldText(false);
+        paint.setTextSize(Math.max(15f, w * 0.028f));
+        paint.setColor(Color.rgb(172, 181, 197));
+        canvas.drawText(subtitle, w / 2f, h / 2f + 30f, paint);
     }
 }
