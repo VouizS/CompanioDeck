@@ -30,6 +30,19 @@ jobs:
         run: |
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
+      - name: Prepare Coffee GB core
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y maven
+          rm -rf /tmp/coffee-gb
+          git clone --depth 1 https://github.com/trekawek/coffee-gb.git /tmp/coffee-gb
+          mkdir -p app/libs
+          cd /tmp/coffee-gb
+          mvn -q -f core/pom.xml -DskipTests -Dmaven.compiler.release=17 -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=$GITHUB_WORKSPACE/app/libs
+          cp core/target/core-*.jar $GITHUB_WORKSPACE/app/libs/coffee-gb-core.jar
+          cd $GITHUB_WORKSPACE
+          ls -lh app/libs
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -41,10 +54,10 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.0-r2-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.1-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CompanionDeck-v1.0-r2-debug-apk
+          name: CompanionDeck-v1.1-debug-apk
           path: dist/*.apk

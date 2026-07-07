@@ -13,6 +13,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.provider.OpenableColumns;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.widget.ArrayAdapter;
@@ -35,7 +36,7 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.0-r2";
+    private static final String INTERNAL_VERSION = "v1.1";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -46,6 +47,7 @@ public class MainActivity extends Activity {
     private final ArrayList<GameEntry> games = new ArrayList<>();
     private String currentTab = "games";
     private GameEntry activePlayerGame;
+    private CoffeeGbPlayerView activeCoffeeView;
     private boolean inPlayer = false;
     private boolean sidebarOpen = false;
 
@@ -155,6 +157,7 @@ public class MainActivity extends Activity {
     }
 
     private void renderMain() {
+        stopActiveCoreIfNeeded();
         inPlayer = false;
         sidebarOpen = false;
 
@@ -399,6 +402,84 @@ public class MainActivity extends Activity {
         content.addView(b, lp);
     }
 
+
+    private void stopActiveCoreIfNeeded() {
+        if (activeCoffeeView != null) {
+            activeCoffeeView.stopEmulation();
+            activeCoffeeView = null;
+        }
+    }
+
+    private boolean isCoffeeGbSupported(GameEntry g) {
+        if (g == null || g.platform == null) return false;
+        String file = g.fileName == null ? "" : g.fileName.toLowerCase(Locale.ROOT);
+        return "gbc".equals(g.platform) && (file.endsWith(".gb") || file.endsWith(".gbc"));
+    }
+
+    private void addGameControls(FrameLayout frame, CoffeeGbPlayerView view) {
+        LinearLayout dpad = new LinearLayout(this);
+        dpad.setOrientation(LinearLayout.VERTICAL);
+        dpad.setGravity(Gravity.CENTER);
+
+        Button up = controlButton("▲", view, eu.rekawek.coffeegb.core.joypad.Button.UP);
+        Button down = controlButton("▼", view, eu.rekawek.coffeegb.core.joypad.Button.DOWN);
+
+        LinearLayout mid = new LinearLayout(this);
+        mid.setOrientation(LinearLayout.HORIZONTAL);
+        Button left = controlButton("◀", view, eu.rekawek.coffeegb.core.joypad.Button.LEFT);
+        Button center = btn("●", false);
+        center.setEnabled(false);
+        Button right = controlButton("▶", view, eu.rekawek.coffeegb.core.joypad.Button.RIGHT);
+        mid.addView(left, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        mid.addView(center, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        mid.addView(right, new LinearLayout.LayoutParams(dp(52), dp(52)));
+
+        dpad.addView(up, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        dpad.addView(mid);
+        dpad.addView(down, new LinearLayout.LayoutParams(dp(52), dp(52)));
+
+        FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(dp(170), dp(170), Gravity.BOTTOM | Gravity.LEFT);
+        dlp.setMargins(dp(18), 0, 0, dp(34));
+        frame.addView(dpad, dlp);
+
+        LinearLayout ab = new LinearLayout(this);
+        ab.setOrientation(LinearLayout.HORIZONTAL);
+        ab.setGravity(Gravity.CENTER);
+        ab.addView(controlButton("B", view, eu.rekawek.coffeegb.core.joypad.Button.B), new LinearLayout.LayoutParams(dp(64), dp(64)));
+        ab.addView(controlButton("A", view, eu.rekawek.coffeegb.core.joypad.Button.A), new LinearLayout.LayoutParams(dp(64), dp(64)));
+        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(dp(150), dp(80), Gravity.BOTTOM | Gravity.RIGHT);
+        alp.setMargins(0, 0, dp(22), dp(62));
+        frame.addView(ab, alp);
+
+        LinearLayout startSelect = new LinearLayout(this);
+        startSelect.setOrientation(LinearLayout.HORIZONTAL);
+        startSelect.setGravity(Gravity.CENTER);
+        startSelect.addView(controlButton("SELECT", view, eu.rekawek.coffeegb.core.joypad.Button.SELECT), new LinearLayout.LayoutParams(dp(94), dp(42)));
+        startSelect.addView(controlButton("START", view, eu.rekawek.coffeegb.core.joypad.Button.START), new LinearLayout.LayoutParams(dp(94), dp(42)));
+        FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(dp(210), dp(52), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        slp.setMargins(0, 0, 0, dp(18));
+        frame.addView(startSelect, slp);
+    }
+
+    private Button controlButton(String label, CoffeeGbPlayerView view, eu.rekawek.coffeegb.core.joypad.Button gbButton) {
+        Button b = btn(label, false);
+        b.setTextSize(label.length() > 2 ? 11 : 18);
+        b.setOnTouchListener((v, event) -> {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
+                view.setButtonPressed(gbButton, true);
+                return true;
+            }
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_UP) {
+                view.setButtonPressed(gbButton, false);
+                return true;
+            }
+            return true;
+        });
+        return b;
+    }
+
+
     private void pickRom() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -551,9 +632,17 @@ public class MainActivity extends Activity {
         FrameLayout frame = new FrameLayout(this);
         frame.setBackgroundColor(Color.BLACK);
 
-        NativeCoreSurface surface = new NativeCoreSurface(this);
-        surface.setSlotText(g.name, NativeCoreBridge.runtimeMessage(g.platform));
-        frame.addView(surface, new FrameLayout.LayoutParams(-1, -1));
+        if (isCoffeeGbSupported(g)) {
+            CoffeeGbPlayerView coffee = new CoffeeGbPlayerView(this);
+            activeCoffeeView = coffee;
+            frame.addView(coffee, new FrameLayout.LayoutParams(-1, -1));
+            coffee.loadGame(Uri.parse(g.uri), g.name);
+            addGameControls(frame, coffee);
+        } else {
+            NativeCoreSurface surface = new NativeCoreSurface(this);
+            surface.setSlotText(g.name, NativeCoreBridge.runtimeMessage(g.platform));
+            frame.addView(surface, new FrameLayout.LayoutParams(-1, -1));
+        }
 
         Button menu = btn("☰", false);
         menu.setTextSize(22);
@@ -666,7 +755,7 @@ public class MainActivity extends Activity {
     private void showTechnicalInfo() {
         new AlertDialog.Builder(this)
                 .setTitle("Informações técnicas")
-                .setMessage("Companion Deck " + INTERNAL_VERSION + "\nInterface nativa AMOLED\nRuntime nativo preparado\nSem WebView como UI principal\nSem core web/CDN\nGB/GBC é o primeiro alvo interno futuro")
+                .setMessage("Companion Deck " + INTERNAL_VERSION + "\nInterface nativa AMOLED\nRuntime nativo preparado\nSem WebView como UI principal\nSem core web/CDN\nGB/GBC com core interno experimental")
                 .setPositiveButton("OK", null)
                 .show();
     }

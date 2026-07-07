@@ -10,8 +10,8 @@ android {
         applicationId 'com.sw.companiodeck'
         minSdk 23
         targetSdk 35
-        versionCode 12
-        versionName 'v1.0-r2'
+        versionCode 13
+        versionName 'v1.1'
     }
 
     buildTypes {
@@ -28,4 +28,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
