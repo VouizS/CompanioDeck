@@ -33,104 +33,112 @@ jobs:
       - name: Prepare Coffee GB core
         run: |
           sudo apt-get update
-          sudo apt-get install -y maven
+          sudo apt-get install -y maven unzip
           rm -rf /tmp/coffee-gb
           git clone --depth 1 https://github.com/trekawek/coffee-gb.git /tmp/coffee-gb
 
           python3 - <<'PY_COFFEE_ANDROID_COMPAT'
           from pathlib import Path
 
-          bios = Path("/tmp/coffee-gb/core/src/main/java/eu/rekawek/coffeegb/core/memory/Bios.java")
-          source = bios.read_text()
+          def ensure_import(source, existing_import, extra_imports):
+              if extra_imports in source:
+                  return source
+              if existing_import not in source:
+                  raise SystemExit(f"Import marker not found: {existing_import}")
+              return source.replace(existing_import, extra_imports + "\n" + existing_import)
 
-          if "readAllBytesCompat(InputStream" not in source:
-              source = source.replace(
-                  "import java.io.IOException;",
-                  "import java.io.ByteArrayOutputStream;\nimport java.io.IOException;\nimport java.io.InputStream;"
+          def patch_bios():
+              path = Path("/tmp/coffee-gb/core/src/main/java/eu/rekawek/coffeegb/core/memory/Bios.java")
+              source = path.read_text()
+
+              if "readAllBytesCompat(InputStream input)" not in source:
+                  source = ensure_import(
+                      source,
+                      "import java.io.IOException;",
+                      "import java.io.ByteArrayOutputStream;\nimport java.io.InputStream;"
+                  )
+
+                  old = "var rom = is.readAllBytes();"
+                  new = "var rom = readAllBytesCompat(is);"
+                  if old not in source:
+                      raise SystemExit("Bios.java: chamada readAllBytes esperada não encontrada")
+                  source = source.replace(old, new)
+
+                  marker = "    private final GameboyType gameboyType;"
+                  helper_lines = [
+                      "    private static byte[] readAllBytesCompat(InputStream input) throws IOException {",
+                      "        ByteArrayOutputStream buffer = new ByteArrayOutputStream();",
+                      "        byte[] data = new byte[8192];",
+                      "        int read;",
+                      "        while ((read = input.read(data, 0, data.length)) != -1) {",
+                      "            buffer.write(data, 0, read);",
+                      "        }",
+                      "        return buffer.toByteArray();",
+                      "    }",
+                      "",
+                  ]
+                  helper = "\n".join(helper_lines)
+                  if marker not in source:
+                      raise SystemExit("Bios.java: marcador para helper não encontrado")
+                  source = source.replace(marker, helper + marker)
+
+              path.write_text(source)
+
+          def patch_defined_palettes():
+              path = Path("/tmp/coffee-gb/core/src/main/java/eu/rekawek/coffeegb/core/sgb/DefinedPalettes.java")
+              source = path.read_text()
+              old = "var bytes = is.readAllBytes();"
+              new = (
+                  "var out = new java.io.ByteArrayOutputStream(); "
+                  "byte[] buffer = new byte[4096]; "
+                  "int read; "
+                  "while ((read = is.read(buffer)) != -1) { out.write(buffer, 0, read); } "
+                  "var bytes = out.toByteArray();"
               )
-              source = source.replace(
-                  "var rom = is.readAllBytes();",
-                  "var rom = readAllBytesCompat(is);"
-              )
+              if old in source:
+                  source = source.replace(old, new)
+              elif "readAllBytes()" in source:
+                  raise SystemExit("DefinedPalettes.java: readAllBytes em formato inesperado")
+              path.write_text(source)
 
-              marker = "    private final GameboyType gameboyType;"
-              helper = """    private static byte[] readAllBytesCompat(InputStream input) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] data = new byte[8192];
-        int read;
-        while ((read = input.read(data, 0, data.length)) != -1) {
-            buffer.write(data, 0, read);
-        }
-        return buffer.toByteArray();
-    }
+          patch_bios()
+          patch_defined_palettes()
 
-"""
-              if marker not in source:
-                  raise SystemExit("Não encontrei marcador seguro em Bios.java para inserir helper Android")
-              source = source.replace(marker, helper + marker)
+          offenders = []
+          for path in Path("/tmp/coffee-gb/core/src/main/java").rglob("*.java"):
+              if "readAllBytes()" in path.read_text():
+                  offenders.append(str(path))
+          if offenders:
+              print("Ainda existem chamadas readAllBytes incompatíveis:")
+              for item in offenders:
+                  print(item)
+              raise SystemExit(1)
 
-          if ".readAllBytes()" in source:
-              raise SystemExit("Bios.java ainda contém readAllBytes(), incompatível com runtime Android atual")
-
-          bios.write_text(source)
-          print("Coffee GB Bios.java patch Android compat aplicado.")
+          print("Coffee GB Android runtime compatibility patch aplicado.")
           PY_COFFEE_ANDROID_COMPAT
 
           rm -rf app/libs
           mkdir -p app/libs
 
           cd /tmp/coffee-gb
-
-          python3 - <<'PY_COFFEE_ANDROID11_READALLBYTES_PATCH'
-
-          from pathlib import Path
-
-          p = Path('core/src/main/java/eu/rekawek/coffeegb/core/sgb/DefinedPalettes.java')
-
-          s = p.read_text()
-
-          old = 'var bytes = is.readAllBytes();'
-
-          new = 'var out = new java.io.ByteArrayOutputStream(); byte[] buffer = new byte[4096]; int read; while ((read = is.read(buffer)) != -1) { out.write(buffer, 0, read); } var bytes = out.toByteArray();'
-
-          if old in s:
-
-              s = s.replace(old, new)
-
-          elif 'readAllBytes()' in s:
-
-              raise SystemExit('DefinedPalettes ainda usa readAllBytes em formato inesperado')
-
-          p.write_text(s)
-
-          PY_COFFEE_ANDROID11_READALLBYTES_PATCH
-
-          if grep -R "readAllBytes" core/src/main/java/eu/rekawek/coffeegb/core/sgb/DefinedPalettes.java; then
-
-            echo "DefinedPalettes ainda contém readAllBytes. Abortando para evitar crash no Android 11."
-
-            exit 1
-
-          fi
           mvn -q -f core/pom.xml -DskipTests -Dmaven.compiler.release=17 -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 package
 
-          cp core/target/core-*.jar $GITHUB_WORKSPACE/app/libs/coffee-gb-core.jar
+          cp core/target/core-*.jar "$GITHUB_WORKSPACE/app/libs/coffee-gb-core.jar"
 
-
-          if unzip -p app/libs/coffee-gb-core.jar eu/rekawek/coffeegb/core/sgb/DefinedPalettes.class 2>/dev/null | strings | grep -q readAllBytes; then
-
-            echo "coffee-gb-core.jar ainda contém chamada readAllBytes. Abortando."
-
+          if unzip -p "$GITHUB_WORKSPACE/app/libs/coffee-gb-core.jar" eu/rekawek/coffeegb/core/memory/Bios.class 2>/dev/null | strings | grep -q readAllBytes; then
+            echo "coffee-gb-core.jar ainda contém readAllBytes em Bios.class. Abortando."
             exit 1
-
           fi
-          # Copiar somente dependências Android-safe necessárias pelo core.
-          # Não usar dependency:copy-dependencies porque ela traz jline/guava/kotlin
-          # do ecossistema desktop e quebra o D8 no Android.
-          mvn -q dependency:copy -Dartifact=org.slf4j:slf4j-api:2.0.12 -DoutputDirectory=$GITHUB_WORKSPACE/app/libs -Dtransitive=false
-          mvn -q dependency:copy -Dartifact=org.jetbrains:annotations:24.1.0 -DoutputDirectory=$GITHUB_WORKSPACE/app/libs -Dtransitive=false
 
-          cd $GITHUB_WORKSPACE
+          if unzip -p "$GITHUB_WORKSPACE/app/libs/coffee-gb-core.jar" eu/rekawek/coffeegb/core/sgb/DefinedPalettes.class 2>/dev/null | strings | grep -q readAllBytes; then
+            echo "coffee-gb-core.jar ainda contém readAllBytes em DefinedPalettes.class. Abortando."
+            exit 1
+          fi
+
+          mvn -q dependency:copy -Dartifact=org.slf4j:slf4j-api:2.0.12 -DoutputDirectory="$GITHUB_WORKSPACE/app/libs" -Dtransitive=false
+          mvn -q dependency:copy -Dartifact=org.jetbrains:annotations:24.1.0 -DoutputDirectory="$GITHUB_WORKSPACE/app/libs" -Dtransitive=false
+
+          cd "$GITHUB_WORKSPACE"
           echo "JARs finais do APK:"
           ls -lh app/libs
           test ! -f app/libs/jline-*.jar
@@ -148,10 +156,10 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.1-r3-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.1-r16-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CompanionDeck-v1.1-r3-debug-apk
+          name: CompanionDeck-v1.1-r16-debug-apk
           path: dist/*.apk
