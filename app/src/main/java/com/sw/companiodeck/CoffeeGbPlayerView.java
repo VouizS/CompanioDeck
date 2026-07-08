@@ -1,11 +1,15 @@
 package com.sw.companiodeck;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.view.View;
 
 import eu.rekawek.coffeegb.core.Gameboy;
@@ -20,6 +24,10 @@ import eu.rekawek.coffeegb.core.serial.SerialEndpoint;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
@@ -102,7 +110,8 @@ public class CoffeeGbPlayerView extends View {
                 startLoop();
             } catch (Throwable t) {
                 running = false;
-                status = "Falha real do core: " + compactError(t);
+                String reportPath = saveCoreErrorReport("loader", t);
+                status = "Falha real do core: " + compactError(t) + (reportPath.isEmpty() ? "" : "\nLog salvo: " + reportPath);
                 postInvalidate();
             }
         }, "CoffeeGbLoader");
@@ -183,7 +192,8 @@ public class CoffeeGbPlayerView extends View {
                         gameboy.tick();
                     }
                 } catch (Throwable t) {
-                    status = "Core pausado: " + compactError(t);
+                    String reportPath = saveCoreErrorReport("core-loop", t);
+                    status = "Core pausado: " + compactError(t) + (reportPath.isEmpty() ? "" : "\nLog salvo: " + reportPath);
                     running = false;
                     postInvalidate();
                     break;
@@ -335,12 +345,80 @@ public class CoffeeGbPlayerView extends View {
         }
     }
 
+    private String saveCoreErrorReport(String phase, Throwable t) {
+        String fileName = "CompanionDeck-core-error-" + System.currentTimeMillis() + ".txt";
+
+        StringWriter stack = new StringWriter();
+        if (t != null) {
+            t.printStackTrace(new PrintWriter(stack));
+        }
+
+        String body = "Companion Deck Core Error\n"
+                + "Version: v1.1-r9\n"
+                + "Phase: " + phase + "\n"
+                + "Source: " + (sourceInfo == null ? "" : sourceInfo) + "\n"
+                + "Error: " + compactError(t) + "\n\n"
+                + stack.toString();
+
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+
+        try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
+                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/CompanionDeck");
+
+                Uri outUri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (outUri != null) {
+                    try (OutputStream out = getContext().getContentResolver().openOutputStream(outUri)) {
+                        if (out != null) {
+                            out.write(bytes);
+                            out.flush();
+                            return "Download/CompanionDeck/" + fileName;
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            File dir = new File(getContext().getExternalFilesDir(null), "logs");
+            if (!dir.exists()) dir.mkdirs();
+            File outFile = new File(dir, fileName);
+            try (FileOutputStream out = new FileOutputStream(outFile)) {
+                out.write(bytes);
+                out.flush();
+            }
+            return outFile.getAbsolutePath();
+        } catch (Throwable ignored) {
+        }
+
+        return "";
+    }
+
     private String compactError(Throwable t) {
         if (t == null) return "erro desconhecido";
-        String message = t.getMessage();
-        if (message == null || message.trim().isEmpty()) {
-            return t.getClass().getSimpleName();
+
+        Throwable root = t;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
         }
-        return t.getClass().getSimpleName() + ": " + message;
+
+        String message = t.getMessage();
+        String main = (message == null || message.trim().isEmpty())
+                ? t.getClass().getSimpleName()
+                : t.getClass().getSimpleName() + ": " + message;
+
+        if (root != t) {
+            String rootMessage = root.getMessage();
+            String rootText = (rootMessage == null || rootMessage.trim().isEmpty())
+                    ? root.getClass().getSimpleName()
+                    : root.getClass().getSimpleName() + ": " + rootMessage;
+            return main + " | causa: " + rootText;
+        }
+
+        return main;
     }
 }
