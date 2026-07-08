@@ -354,7 +354,7 @@ public class CoffeeGbPlayerView extends View {
         }
 
         String body = "Companion Deck Core Error\n"
-                + "Version: v1.1-r9\n"
+                + "Version: v1.1-r11\n"
                 + "Phase: " + phase + "\n"
                 + "Source: " + (sourceInfo == null ? "" : sourceInfo) + "\n"
                 + "Error: " + compactError(t) + "\n\n"

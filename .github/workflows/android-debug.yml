@@ -41,10 +41,50 @@ jobs:
           mkdir -p app/libs
 
           cd /tmp/coffee-gb
+
+          python3 - <<'PY_COFFEE_ANDROID11_READALLBYTES_PATCH'
+
+          from pathlib import Path
+
+          p = Path('core/src/main/java/eu/rekawek/coffeegb/core/sgb/DefinedPalettes.java')
+
+          s = p.read_text()
+
+          old = 'var bytes = is.readAllBytes();'
+
+          new = 'var out = new java.io.ByteArrayOutputStream(); byte[] buffer = new byte[4096]; int read; while ((read = is.read(buffer)) != -1) { out.write(buffer, 0, read); } var bytes = out.toByteArray();'
+
+          if old in s:
+
+              s = s.replace(old, new)
+
+          elif 'readAllBytes()' in s:
+
+              raise SystemExit('DefinedPalettes ainda usa readAllBytes em formato inesperado')
+
+          p.write_text(s)
+
+          PY_COFFEE_ANDROID11_READALLBYTES_PATCH
+
+          if grep -R "readAllBytes" core/src/main/java/eu/rekawek/coffeegb/core/sgb/DefinedPalettes.java; then
+
+            echo "DefinedPalettes ainda contém readAllBytes. Abortando para evitar crash no Android 11."
+
+            exit 1
+
+          fi
           mvn -q -f core/pom.xml -DskipTests -Dmaven.compiler.release=17 -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 package
 
           cp core/target/core-*.jar $GITHUB_WORKSPACE/app/libs/coffee-gb-core.jar
 
+
+          if unzip -p app/libs/coffee-gb-core.jar eu/rekawek/coffeegb/core/sgb/DefinedPalettes.class 2>/dev/null | strings | grep -q readAllBytes; then
+
+            echo "coffee-gb-core.jar ainda contém chamada readAllBytes. Abortando."
+
+            exit 1
+
+          fi
           # Copiar somente dependências Android-safe necessárias pelo core.
           # Não usar dependency:copy-dependencies porque ela traz jline/guava/kotlin
           # do ecossistema desktop e quebra o D8 no Android.
