@@ -28,6 +28,7 @@ import java.util.zip.ZipInputStream;
 public class CoffeeGbPlayerView extends View {
     private static final int GB_W = 160;
     private static final int GB_H = 144;
+    private static final long MAX_ROM_BYTES = 16L * 1024L * 1024L;
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Object frameLock = new Object();
@@ -37,6 +38,7 @@ public class CoffeeGbPlayerView extends View {
     private volatile boolean running;
     private volatile boolean hasFrame;
     private volatile String status = "Carregando core GB/GBC...";
+    private volatile String sourceInfo = "";
 
     private Runnable onFirstFrameListener;
     private Thread emuThread;
@@ -46,6 +48,7 @@ public class CoffeeGbPlayerView extends View {
     public CoffeeGbPlayerView(Context context) {
         super(context);
         setBackgroundColor(Color.BLACK);
+        setFocusable(true);
     }
 
     public void setOnFirstFrameListener(Runnable listener) {
@@ -55,19 +58,24 @@ public class CoffeeGbPlayerView extends View {
     public void loadGame(Uri uri, String title) {
         stopEmulation();
         hasFrame = false;
+        sourceInfo = "";
         status = "Preparando " + (title == null ? "jogo" : title) + "...";
         invalidate();
 
-        new Thread(() -> {
+        Thread loader = new Thread(() -> {
             try {
                 File romFile = copyRomToCache(uri);
+                sourceInfo = romFile.getName() + " • " + Math.max(1L, romFile.length() / 1024L) + " KB";
+                status = "Iniciando Coffee GB...";
+                postInvalidate();
+
                 Gameboy.GameboyConfiguration config = new Gameboy.GameboyConfiguration(romFile)
                         .setBootstrapMode(Gameboy.BootstrapMode.SKIP);
 
-                gameboy = config.build();
-                eventBus = new EventBusImpl(null, null, false);
+                Gameboy builtGameboy = config.build();
+                EventBusImpl builtBus = new EventBusImpl(null, null, false);
 
-                eventBus.register(new Subscriber<Display.DmgFrameReadyEvent>() {
+                builtBus.register(new Subscriber<Display.DmgFrameReadyEvent>() {
                     @Override
                     public void onEvent(Display.DmgFrameReadyEvent event) {
                         int[] rgb = new int[GB_W * GB_H];
@@ -76,7 +84,7 @@ public class CoffeeGbPlayerView extends View {
                     }
                 }, Display.DmgFrameReadyEvent.class);
 
-                eventBus.register(new Subscriber<Display.GbcFrameReadyEvent>() {
+                builtBus.register(new Subscriber<Display.GbcFrameReadyEvent>() {
                     @Override
                     public void onEvent(Display.GbcFrameReadyEvent event) {
                         int[] rgb = new int[GB_W * GB_H];
@@ -85,32 +93,40 @@ public class CoffeeGbPlayerView extends View {
                     }
                 }, Display.GbcFrameReadyEvent.class);
 
+                gameboy = builtGameboy;
+                eventBus = builtBus;
                 gameboy.init(eventBus, SerialEndpoint.NULL_ENDPOINT, null);
                 running = true;
-                status = "";
+                status = "Aguardando primeiro frame real...";
+                postInvalidate();
                 startLoop();
             } catch (Throwable t) {
-                String detail = t.getMessage() == null
-                        ? t.getClass().getSimpleName()
-                        : t.getClass().getSimpleName() + ": " + t.getMessage();
-                status = "Falha real do core: " + detail;
+                running = false;
+                status = "Falha real do core: " + compactError(t);
                 postInvalidate();
             }
-        }, "CoffeeGbLoader").start();
+        }, "CoffeeGbLoader");
+
+        loader.start();
     }
 
     private File copyRomToCache(Uri uri) throws Exception {
-        File outFile = new File(getContext().getCacheDir(), "companion_deck_gb_rom_" + System.currentTimeMillis() + ".gb");
+        if (uri == null) {
+            throw new IllegalStateException("URI da ROM indisponível");
+        }
 
-        boolean openedZip = false;
+        boolean sawZipEntry = false;
+
         try (InputStream raw = getContext().getContentResolver().openInputStream(uri);
              ZipInputStream zip = raw == null ? null : new ZipInputStream(raw)) {
             if (zip != null) {
                 ZipEntry entry;
                 while ((entry = zip.getNextEntry()) != null) {
-                    openedZip = true;
+                    sawZipEntry = true;
                     String name = entry.getName() == null ? "" : entry.getName().toLowerCase(Locale.ROOT);
                     if (!entry.isDirectory() && (name.endsWith(".gb") || name.endsWith(".gbc"))) {
+                        String suffix = name.endsWith(".gbc") ? ".gbc" : ".gb";
+                        File outFile = new File(getContext().getCacheDir(), "companion_deck_rom_" + System.currentTimeMillis() + suffix);
                         try (FileOutputStream out = new FileOutputStream(outFile)) {
                             copyLimited(zip, out);
                         }
@@ -119,13 +135,14 @@ public class CoffeeGbPlayerView extends View {
                 }
             }
         } catch (ZipException ignored) {
-            openedZip = false;
+            sawZipEntry = false;
         }
 
-        if (openedZip) {
+        if (sawZipEntry) {
             throw new IllegalStateException("ZIP sem arquivo .gb/.gbc dentro");
         }
 
+        File outFile = new File(getContext().getCacheDir(), "companion_deck_rom_" + System.currentTimeMillis() + ".gb");
         try (InputStream in = getContext().getContentResolver().openInputStream(uri);
              FileOutputStream out = new FileOutputStream(outFile)) {
             if (in == null) {
@@ -133,7 +150,6 @@ public class CoffeeGbPlayerView extends View {
             }
             copyLimited(in, out);
         }
-
         return outFile;
     }
 
@@ -141,14 +157,17 @@ public class CoffeeGbPlayerView extends View {
         byte[] buffer = new byte[16384];
         int read;
         long total = 0;
-        long limit = 16L * 1024L * 1024L;
 
         while ((read = in.read(buffer)) != -1) {
             total += read;
-            if (total > limit) {
-                throw new IllegalStateException("ROM acima do limite inicial");
+            if (total > MAX_ROM_BYTES) {
+                throw new IllegalStateException("ROM acima do limite inicial de 16 MB");
             }
             out.write(buffer, 0, read);
+        }
+
+        if (total <= 0) {
+            throw new IllegalStateException("Arquivo de ROM vazio");
         }
     }
 
@@ -160,14 +179,11 @@ public class CoffeeGbPlayerView extends View {
                 long start = System.nanoTime();
 
                 try {
-                    for (int i = 0; i < ticksPerFrame && running; i++) {
+                    for (int i = 0; i < ticksPerFrame && running && gameboy != null; i++) {
                         gameboy.tick();
                     }
                 } catch (Throwable t) {
-                    String detail = t.getMessage() == null
-                            ? t.getClass().getSimpleName()
-                            : t.getClass().getSimpleName() + ": " + t.getMessage();
-                    status = "Core pausado: " + detail;
+                    status = "Core pausado: " + compactError(t);
                     running = false;
                     postInvalidate();
                     break;
@@ -197,6 +213,7 @@ public class CoffeeGbPlayerView extends View {
                 latestFrame[i] = 0xFF000000 | (rgb[i] & 0x00FFFFFF);
             }
             hasFrame = true;
+            status = "";
         }
 
         if (firstFrame && onFirstFrameListener != null) {
@@ -211,7 +228,7 @@ public class CoffeeGbPlayerView extends View {
 
     public void setButtonPressed(Button button, boolean pressed) {
         EventBusImpl bus = eventBus;
-        if (bus == null || button == null) return;
+        if (bus == null || button == null || !hasFrame) return;
 
         if (pressed) {
             bus.post(new ButtonPressEvent(button));
@@ -223,20 +240,21 @@ public class CoffeeGbPlayerView extends View {
     public void stopEmulation() {
         running = false;
 
-        try {
-            if (gameboy != null) gameboy.close();
-        } catch (Throwable ignored) {
-        }
-
-        try {
-            if (eventBus != null) eventBus.close();
-        } catch (Throwable ignored) {
-        }
-
+        Gameboy gb = gameboy;
+        EventBusImpl bus = eventBus;
         gameboy = null;
         eventBus = null;
-        emuThread = null;
         onFirstFrameListener = null;
+
+        try {
+            if (gb != null) gb.close();
+        } catch (Throwable ignored) {
+        }
+
+        try {
+            if (bus != null) bus.close();
+        } catch (Throwable ignored) {
+        }
     }
 
     @Override
@@ -254,7 +272,8 @@ public class CoffeeGbPlayerView extends View {
                 frameBitmap.setPixels(latestFrame, 0, GB_W, 0, 0, GB_W, GB_H);
             }
 
-            float scale = Math.min(getWidth() / (float) GB_W, getHeight() / (float) GB_H);
+            paint.setFilterBitmap(false);
+            float scale = Math.max(1f, (float) Math.floor(Math.min(getWidth() / (float) GB_W, getHeight() / (float) GB_H)));
             float drawW = GB_W * scale;
             float drawH = GB_H * scale;
             float left = (getWidth() - drawW) / 2f;
@@ -264,6 +283,11 @@ public class CoffeeGbPlayerView extends View {
             return;
         }
 
+        drawLoading(canvas);
+    }
+
+    private void drawLoading(Canvas canvas) {
+        paint.setFilterBitmap(true);
         paint.setColor(Color.BLACK);
         canvas.drawRect(0, 0, getWidth(), getHeight(), paint);
 
@@ -274,12 +298,18 @@ public class CoffeeGbPlayerView extends View {
         paint.setFakeBoldText(true);
         paint.setTextSize(Math.max(24f, getWidth() * 0.052f));
         paint.setColor(Color.rgb(248, 250, 252));
-        canvas.drawText("GB/GBC Core", getWidth() / 2f, getHeight() / 2f - 12f, paint);
+        canvas.drawText("GB/GBC Core Real", getWidth() / 2f, getHeight() / 2f - 28f, paint);
 
         paint.setFakeBoldText(false);
         paint.setTextSize(Math.max(12f, getWidth() * 0.026f));
         paint.setColor(Color.rgb(172, 181, 197));
-        drawCenteredMultiline(canvas, status, getWidth() / 2f, getHeight() / 2f + 24f, getWidth() - 48);
+        drawCenteredMultiline(canvas, status, getWidth() / 2f, getHeight() / 2f + 8f, getWidth() - 48);
+
+        if (sourceInfo != null && !sourceInfo.isEmpty()) {
+            paint.setTextSize(Math.max(10f, getWidth() * 0.022f));
+            paint.setColor(Color.rgb(112, 126, 150));
+            drawCenteredMultiline(canvas, sourceInfo, getWidth() / 2f, getHeight() - 56f, getWidth() - 48);
+        }
     }
 
     private void drawCenteredMultiline(Canvas canvas, String text, float centerX, float startY, int maxWidth) {
@@ -303,5 +333,14 @@ public class CoffeeGbPlayerView extends View {
         if (line.length() > 0) {
             canvas.drawText(line.toString(), centerX, y, paint);
         }
+    }
+
+    private String compactError(Throwable t) {
+        if (t == null) return "erro desconhecido";
+        String message = t.getMessage();
+        if (message == null || message.trim().isEmpty()) {
+            return t.getClass().getSimpleName();
+        }
+        return t.getClass().getSimpleName() + ": " + message;
     }
 }

@@ -39,7 +39,7 @@ import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.1-r7";
+    private static final String INTERNAL_VERSION = "v1.1-r8";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -419,15 +419,12 @@ public class MainActivity extends Activity {
             activeCoffeeView = null;
         }
     }
-
     private boolean isCoffeeGbSupported(GameEntry g) {
-        if (g == null || g.platform == null) return false;
+        if (g == null) return false;
         String file = g.fileName == null ? "" : g.fileName.toLowerCase(Locale.ROOT);
         boolean validGbFile = file.endsWith(".gb") || file.endsWith(".gbc") || file.endsWith(".zip");
         return "gbc".equals(g.platform) && validGbFile;
     }
-
-
     private void showNoInternalCore(GameEntry g) {
         String system = g == null ? "este sistema" : platformLabel(g.platform);
         String file = g == null ? "" : g.fileName;
@@ -442,6 +439,7 @@ public class MainActivity extends Activity {
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
+
 
     private void addGameControls(FrameLayout frame, CoffeeGbPlayerView view) {
         if (frame.findViewWithTag("realControls") != null) return;
@@ -540,6 +538,7 @@ public class MainActivity extends Activity {
         g.name = cleanName(fileName);
         g.fileName = fileName;
         g.uri = uri.toString();
+        persistRomUriPermission(uri);
         g.platform = guessPlatform(fileName, uri);
         g.status = "not-tested";
         g.notes = "";
@@ -574,7 +573,15 @@ public class MainActivity extends Activity {
         name = name.replace('_', ' ').trim();
         return name.isEmpty() ? "Jogo" : name;
     }
-
+    private void persistRomUriPermission(Uri uri) {
+        if (uri == null) return;
+        try {
+            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (Throwable ignored) {
+            // Alguns gerenciadores de arquivo não entregam permissão persistível.
+            // Nesse caso o app continua funcionando na sessão atual e mostra erro real se o Android negar depois.
+        }
+    }
     private String guessPlatform(String fileName, Uri uri) {
         String lower = fileName == null ? "" : fileName.toLowerCase(Locale.ROOT);
         if (lower.endsWith(".gb") || lower.endsWith(".gbc")) return "gbc";
@@ -587,7 +594,6 @@ public class MainActivity extends Activity {
         if (lower.endsWith(".iso")) return "manual";
         return "manual";
     }
-
     private boolean zipContainsGbRom(Uri uri) {
         if (uri == null) return false;
         try (InputStream raw = getContentResolver().openInputStream(uri);
@@ -604,6 +610,7 @@ public class MainActivity extends Activity {
         }
         return false;
     }
+
 
     private void showProfile(GameEntry g) {
         LinearLayout box = new LinearLayout(this);
