@@ -37,6 +37,45 @@ jobs:
           rm -rf /tmp/coffee-gb
           git clone --depth 1 https://github.com/trekawek/coffee-gb.git /tmp/coffee-gb
 
+          python3 - <<'PY_COFFEE_ANDROID_COMPAT'
+          from pathlib import Path
+
+          bios = Path("/tmp/coffee-gb/core/src/main/java/eu/rekawek/coffeegb/core/memory/Bios.java")
+          source = bios.read_text()
+
+          if "readAllBytesCompat(InputStream" not in source:
+              source = source.replace(
+                  "import java.io.IOException;",
+                  "import java.io.ByteArrayOutputStream;\nimport java.io.IOException;\nimport java.io.InputStream;"
+              )
+              source = source.replace(
+                  "var rom = is.readAllBytes();",
+                  "var rom = readAllBytesCompat(is);"
+              )
+
+              marker = "    private final GameboyType gameboyType;"
+              helper = """    private static byte[] readAllBytesCompat(InputStream input) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[8192];
+        int read;
+        while ((read = input.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, read);
+        }
+        return buffer.toByteArray();
+    }
+
+"""
+              if marker not in source:
+                  raise SystemExit("Não encontrei marcador seguro em Bios.java para inserir helper Android")
+              source = source.replace(marker, helper + marker)
+
+          if ".readAllBytes()" in source:
+              raise SystemExit("Bios.java ainda contém readAllBytes(), incompatível com runtime Android atual")
+
+          bios.write_text(source)
+          print("Coffee GB Bios.java patch Android compat aplicado.")
+          PY_COFFEE_ANDROID_COMPAT
+
           rm -rf app/libs
           mkdir -p app/libs
 
