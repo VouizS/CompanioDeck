@@ -51,7 +51,7 @@ jobs:
               path = Path("/tmp/coffee-gb/core/src/main/java/eu/rekawek/coffeegb/core/memory/Bios.java")
               source = path.read_text()
 
-              if "readAllBytesCompat(InputStream input)" not in source:
+              if "readFullyCompat(InputStream input)" not in source:
                   source = ensure_import(
                       source,
                       "import java.io.IOException;",
@@ -59,14 +59,14 @@ jobs:
                   )
 
                   old = "var rom = is.readAllBytes();"
-                  new = "var rom = readAllBytesCompat(is);"
+                  new = "var rom = readFullyCompat(is);"
                   if old not in source:
                       raise SystemExit("Bios.java: chamada readAllBytes esperada não encontrada")
                   source = source.replace(old, new)
 
                   marker = "    private final GameboyType gameboyType;"
                   helper_lines = [
-                      "    private static byte[] readAllBytesCompat(InputStream input) throws IOException {",
+                      "    private static byte[] readFullyCompat(InputStream input) throws IOException {",
                       "        ByteArrayOutputStream buffer = new ByteArrayOutputStream();",
                       "        byte[] data = new byte[8192];",
                       "        int read;",
@@ -156,10 +156,10 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.1-r16-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.1-r17-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CompanionDeck-v1.1-r16-debug-apk
+          name: CompanionDeck-v1.1-r17-debug-apk
           path: dist/*.apk
