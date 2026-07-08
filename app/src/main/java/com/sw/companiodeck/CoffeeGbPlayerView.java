@@ -375,7 +375,7 @@ public class CoffeeGbPlayerView extends View {
                         if (out != null) {
                             out.write(bytes);
                             out.flush();
-                            return "Download/CompanionDeck/" + fileName;
+                            return "Download/" + fileName;
                         }
                     }
                 }
