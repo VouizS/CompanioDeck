@@ -137,12 +137,12 @@ jobs:
 
           mvn -q dependency:copy -Dartifact=org.slf4j:slf4j-api:2.0.12 -DoutputDirectory="$GITHUB_WORKSPACE/app/libs" -Dtransitive=false
           mvn -q dependency:copy -Dartifact=org.jetbrains:annotations:24.1.0 -DoutputDirectory="$GITHUB_WORKSPACE/app/libs" -Dtransitive=false
+          mvn -q dependency:copy -Dartifact=com.google.guava:guava:33.2.1-android -DoutputDirectory="$GITHUB_WORKSPACE/app/libs" -Dtransitive=false
 
           cd "$GITHUB_WORKSPACE"
           echo "JARs finais do APK:"
           ls -lh app/libs
           test ! -f app/libs/jline-*.jar
-          test ! -f app/libs/guava-*.jar
           test ! -f app/libs/kotlin-*.jar
 
       - name: Set up Gradle
@@ -156,10 +156,10 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.1-r17-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.1-r18-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CompanionDeck-v1.1-r17-debug-apk
+          name: CompanionDeck-v1.1-r18-debug-apk
           path: dist/*.apk
