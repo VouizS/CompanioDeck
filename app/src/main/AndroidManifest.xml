@@ -16,7 +16,6 @@
 
     <application
         android:allowBackup="true"
-        android:extractNativeLibs="true"
         android:usesCleartextTraffic="false"
         android:icon="@drawable/companiondeck_official_icon"
         android:roundIcon="@drawable/companiondeck_official_icon"
