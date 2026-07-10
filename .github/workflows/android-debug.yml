@@ -23,12 +23,59 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Use preinstalled Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          command -v sdkmanager
+          sdkmanager --version
+
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
 
       - name: Install Android packages
+        shell: bash
         run: |
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          set -euo pipefail
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+
+          packages=(
+            "platform-tools"
+            "platforms;android-35"
+            "build-tools;35.0.0"
+          )
+
+          installed=0
+          for attempt in 1 2 3 4; do
+            echo "Tentativa $attempt/4 para instalar pacotes Android..."
+            if sdkmanager "${packages[@]}"; then
+              installed=1
+              break
+            fi
+            sleep 10
+          done
+
+          if [ "$installed" != "1" ]; then
+            echo "Falha ao instalar pacotes Android após 4 tentativas."
+            exit 1
+          fi
+
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
 
       - name: Prepare Coffee GB core
         run: |
@@ -156,10 +203,10 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.2-r2-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.2-r3-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CompanionDeck-v1.2-r2-debug-apk
+          name: CompanionDeck-v1.2-r3-debug-apk
           path: dist/*.apk
