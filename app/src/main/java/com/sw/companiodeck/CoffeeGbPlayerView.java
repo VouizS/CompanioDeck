@@ -46,6 +46,7 @@ public class CoffeeGbPlayerView extends View {
     private volatile boolean running;
     private volatile boolean hasFrame;
     private volatile String status = "Carregando core GB/GBC...";
+    private volatile int scaleMode = 0;
     private volatile String sourceInfo = "";
 
     private Runnable onFirstFrameListener;
@@ -61,6 +62,17 @@ public class CoffeeGbPlayerView extends View {
 
     public void setOnFirstFrameListener(Runnable listener) {
         this.onFirstFrameListener = listener;
+    }
+
+    public void cycleScaleMode() {
+        scaleMode = (scaleMode + 1) % 3;
+        postInvalidate();
+    }
+
+    public String getScaleModeLabel() {
+        if (scaleMode == 1) return "Cheia";
+        if (scaleMode == 2) return "Nítida";
+        return "Conforto";
     }
 
     public void loadGame(Uri uri, String title) {

@@ -53,6 +53,8 @@ public class MainActivity extends Activity {
     private CoffeeGbPlayerView activeCoffeeView;
     private boolean inPlayer = false;
     private boolean sidebarOpen = false;
+    private boolean controlsVisible = true;
+    private FrameLayout activeControlsLayer;
 
     private LinearLayout content;
 
@@ -418,6 +420,7 @@ public class MainActivity extends Activity {
             activeCoffeeView.stopEmulation();
             activeCoffeeView = null;
         }
+        activeControlsLayer = null;
     }
     private boolean isCoffeeGbSupported(GameEntry g) {
         if (g == null) return false;
@@ -448,6 +451,8 @@ public class MainActivity extends Activity {
         if (frame.findViewWithTag("realControls") != null) return;
         FrameLayout layer = new FrameLayout(this);
         layer.setTag("realControls");
+        activeControlsLayer = layer;
+        layer.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
         frame.addView(layer, new FrameLayout.LayoutParams(-1, -1));
         LinearLayout dpad = new LinearLayout(this);
         dpad.setOrientation(LinearLayout.VERTICAL);
@@ -471,7 +476,7 @@ public class MainActivity extends Activity {
         dpad.addView(down, new LinearLayout.LayoutParams(dp(52), dp(52)));
 
         FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(dp(170), dp(170), Gravity.BOTTOM | Gravity.LEFT);
-        dlp.setMargins(dp(18), 0, 0, dp(34));
+        dlp.setMargins(dp(18), 0, 0, dp(42));
         layer.addView(dpad, dlp);
 
         LinearLayout ab = new LinearLayout(this);
@@ -480,7 +485,7 @@ public class MainActivity extends Activity {
         ab.addView(controlButton("B", view, eu.rekawek.coffeegb.core.joypad.Button.B), new LinearLayout.LayoutParams(dp(64), dp(64)));
         ab.addView(controlButton("A", view, eu.rekawek.coffeegb.core.joypad.Button.A), new LinearLayout.LayoutParams(dp(64), dp(64)));
         FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(dp(150), dp(80), Gravity.BOTTOM | Gravity.RIGHT);
-        alp.setMargins(0, 0, dp(22), dp(62));
+        alp.setMargins(0, 0, dp(22), dp(78));
         layer.addView(ab, alp);
 
         LinearLayout startSelect = new LinearLayout(this);
@@ -489,7 +494,7 @@ public class MainActivity extends Activity {
         startSelect.addView(controlButton("SELECT", view, eu.rekawek.coffeegb.core.joypad.Button.SELECT), new LinearLayout.LayoutParams(dp(94), dp(42)));
         startSelect.addView(controlButton("START", view, eu.rekawek.coffeegb.core.joypad.Button.START), new LinearLayout.LayoutParams(dp(94), dp(42)));
         FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(dp(210), dp(52), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        slp.setMargins(0, 0, 0, dp(18));
+        slp.setMargins(0, 0, 0, dp(24));
         layer.addView(startSelect, slp);
     }
 
@@ -688,6 +693,8 @@ public class MainActivity extends Activity {
 
     private void openPlayer(GameEntry g) {
         activePlayerGame = g;
+        controlsVisible = true;
+        activeControlsLayer = null;
         if (!isCoffeeGbSupported(g)) {
             showNoInternalCore(g);
             return;
@@ -716,6 +723,36 @@ public class MainActivity extends Activity {
         setContentView(frame);
     }
 
+
+    private void showControlPanel(FrameLayout frame) {
+        if (activeCoffeeView == null) {
+            Toast.makeText(this, "Abra um jogo GB/GBC primeiro.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String controlsLabel = controlsVisible ? "Ocultar controles" : "Mostrar controles";
+        String scaleLabel = "Tela: " + activeCoffeeView.getScaleModeLabel();
+        String[] options = new String[] { controlsLabel, scaleLabel, "Continuar" };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Controles GB/GBC")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        controlsVisible = !controlsVisible;
+                        if (activeControlsLayer != null) {
+                            activeControlsLayer.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
+                        }
+                        Toast.makeText(this, controlsVisible ? "Controles visíveis" : "Controles ocultos", Toast.LENGTH_SHORT).show();
+                    } else if (which == 1) {
+                        activeCoffeeView.cycleScaleMode();
+                        Toast.makeText(this, "Tela: " + activeCoffeeView.getScaleModeLabel(), Toast.LENGTH_SHORT).show();
+                    } else {
+                        closeSidebar(frame);
+                    }
+                })
+                .show();
+    }
+
     private void showSidebar(FrameLayout frame) {
         if (sidebarOpen) return;
         sidebarOpen = true;
@@ -737,7 +774,7 @@ public class MainActivity extends Activity {
         Button resume = btn("Continuar", true);
         resume.setOnClickListener(v -> closeSidebar(frame));
         Button config = btn("Controles", false);
-        config.setOnClickListener(v -> Toast.makeText(this, "Configuração de controle entra com o core real.", Toast.LENGTH_SHORT).show());
+        config.setOnClickListener(v -> showControlPanel(frame));
         Button external = btn("Abrir externo", false);
         external.setOnClickListener(v -> openExternal(activePlayerGame));
         Button library = btn("Biblioteca", false);
@@ -817,7 +854,7 @@ public class MainActivity extends Activity {
     private void showTechnicalInfo() {
         new AlertDialog.Builder(this)
                 .setTitle("Informações técnicas")
-                .setMessage("Companion Deck " + INTERNAL_VERSION + "\nInterface nativa AMOLED\nRuntime nativo preparado\nSem WebView como UI principal\nSem core web/CDN\nGB/GBC com core interno experimental")
+                .setMessage("Companion Deck " + INTERNAL_VERSION + "\nInterface nativa AMOLED\nRuntime nativo preparado\nSem WebView como UI principal\nSem core web/CDN\nGB/GBC com core interno real experimental")
                 .setPositiveButton("OK", null)
                 .show();
     }
