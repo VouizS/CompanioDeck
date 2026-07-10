@@ -23,7 +23,7 @@ public final class NativeCoreBridge {
 
     public static CoreInfo[] allCores() {
         return new CoreInfo[] {
-                new CoreInfo("gbc", "Game Boy / Color", "Preparando player interno", "Primeiro alvo nativo/offline para .gb/.gbc.", true, false),
+                new CoreInfo("gbc", "Game Boy / Color", "Core nativo disponível", "SameBoy nativo via LibretroDroid para .gb/.gbc e ZIP compatível.", true, false),
                 new CoreInfo("gba", "Game Boy Advance", "Na fila", "Segundo alvo leve após GB/GBC.", true, false),
                 new CoreInfo("snes", "SNES", "Na fila", "Candidato clássico; exige cuidado com áudio e compatibilidade.", true, false),
                 new CoreInfo("psp", "Portátil PSP", "Usar app compatível por enquanto", "Fase avançada. PPSSPP segue como fallback.", false, true),
@@ -45,7 +45,7 @@ public final class NativeCoreBridge {
 
     public static String runtimeMessage(String platformId) {
         CoreInfo info = infoForPlatform(platformId);
-        if (info.internalTarget) return "Player interno preparado para este sistema.";
+        if (info.internalTarget) return "Core interno real disponível para este sistema.";
         return "Este sistema usa fallback externo por enquanto.";
     }
 }

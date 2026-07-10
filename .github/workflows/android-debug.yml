@@ -197,16 +197,65 @@ jobs:
         with:
           gradle-version: 8.10.2
 
+
+      - name: Prepare SameBoy native cores
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y curl unzip file
+
+          fetch_core() {
+            local abi="$1"
+            local url="https://buildbot.libretro.com/nightly/android/latest/${abi}/sameboy_libretro_android.so.zip"
+            local zip="/tmp/sameboy-${abi}.zip"
+            local out_dir="$GITHUB_WORKSPACE/app/src/main/jniLibs/${abi}"
+            local target="${out_dir}/libsameboy_libretro_android.so"
+
+            mkdir -p "$out_dir"
+            rm -f "$zip" "$target"
+
+            echo "Baixando SameBoy para ${abi}..."
+            curl --fail --location \
+              --retry 6 \
+              --retry-delay 5 \
+              --retry-all-errors \
+              "$url" \
+              --output "$zip"
+
+            unzip -t "$zip"
+            entry="$(unzip -Z1 "$zip" | grep -E 'sameboy_libretro_android\.so$' | head -n 1)"
+            if [ -z "$entry" ]; then
+              echo "Biblioteca SameBoy não encontrada dentro do ZIP."
+              unzip -Z1 "$zip"
+              exit 1
+            fi
+
+            unzip -p "$zip" "$entry" > "$target"
+            test -s "$target"
+            chmod 755 "$target"
+            file "$target"
+          }
+
+          fetch_core "arm64-v8a"
+          fetch_core "armeabi-v7a"
+
+          find app/src/main/jniLibs \
+            -type f \
+            -name 'libsameboy_libretro_android.so' \
+            -print \
+            -exec ls -lh {} \;
+
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
 
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.2-r4-r2-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.3-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CompanionDeck-v1.2-r4-r2-debug-apk
+          name: CompanionDeck-v1.3-debug-apk
           path: dist/*.apk
