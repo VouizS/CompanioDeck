@@ -223,8 +223,7 @@ public class CoffeeGbPlayerView extends View {
                     for (int i = 0; i < ticksPerFrame && running && gameboy != null; i++) gameboy.tick();
                 } catch (Throwable t) {
                     String reportPath = saveCoreErrorReport("core-loop", t);
-                    status = "Core pausado: " + compactError(t) + (reportPath.isEmpty() ? "" : "
-Log salvo: " + reportPath);
+                    status = "Core pausado: " + compactError(t) + (reportPath.isEmpty() ? "" : "\nLog salvo: " + reportPath);
                     running = false; postInvalidate(); break;
                 }
                 if (!turboEnabled) {
@@ -375,8 +374,7 @@ Log salvo: " + reportPath);
         }
 
         String body = "Companion Deck Core Error\n"
-                + "Version: v1.2-r4-r1
-"
+                + "Version: v1.2-r4-r2\n"
                 + "Phase: " + phase + "\n"
                 + "Source: " + (sourceInfo == null ? "" : sourceInfo) + "\n"
                 + "Error: " + compactError(t) + "\n\n"
