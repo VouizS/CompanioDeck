@@ -54,6 +54,7 @@ public class MainActivity extends Activity {
     private boolean inPlayer = false;
     private boolean sidebarOpen = false;
     private boolean controlsVisible = true;
+    private boolean playerLandscape = false;
     private FrameLayout activeControlsLayer;
 
     private LinearLayout content;
@@ -165,6 +166,8 @@ public class MainActivity extends Activity {
         stopActiveCoreIfNeeded();
         inPlayer = false;
         sidebarOpen = false;
+        playerLandscape = false;
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -694,7 +697,9 @@ public class MainActivity extends Activity {
     private void openPlayer(GameEntry g) {
         activePlayerGame = g;
         controlsVisible = true;
+        playerLandscape = false;
         activeControlsLayer = null;
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         if (!isCoffeeGbSupported(g)) {
             showNoInternalCore(g);
             return;
@@ -708,9 +713,7 @@ public class MainActivity extends Activity {
         CoffeeGbPlayerView coffee = new CoffeeGbPlayerView(this);
         activeCoffeeView = coffee;
         frame.addView(coffee, new FrameLayout.LayoutParams(-1, -1));
-        coffee.setOnFirstFrameListener(() -> runOnUiThread(() -> {
-            if (coffee == activeCoffeeView) addGameControls(frame, coffee);
-        }));
+        addGameControls(frame, coffee);
         coffee.loadGame(Uri.parse(g.uri), g.name);
 
         Button menu = btn("☰", false);
@@ -732,7 +735,8 @@ public class MainActivity extends Activity {
 
         String controlsLabel = controlsVisible ? "Ocultar controles" : "Mostrar controles";
         String scaleLabel = "Tela: " + activeCoffeeView.getScaleModeLabel();
-        String[] options = new String[] { controlsLabel, scaleLabel, "Continuar" };
+        String orientationLabel = playerLandscape ? "Orientação: Vertical" : "Orientação: Horizontal";
+        String[] options = new String[] { controlsLabel, scaleLabel, orientationLabel, "Continuar" };
 
         new AlertDialog.Builder(this)
                 .setTitle("Controles GB/GBC")
@@ -746,6 +750,15 @@ public class MainActivity extends Activity {
                     } else if (which == 1) {
                         activeCoffeeView.cycleScaleMode();
                         Toast.makeText(this, "Tela: " + activeCoffeeView.getScaleModeLabel(), Toast.LENGTH_SHORT).show();
+                    } else if (which == 2) {
+                        playerLandscape = !playerLandscape;
+                        if (playerLandscape) {
+                            setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+                            Toast.makeText(this, "Modo horizontal ativado", Toast.LENGTH_SHORT).show();
+                        } else {
+                            setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                            Toast.makeText(this, "Modo vertical/automático", Toast.LENGTH_SHORT).show();
+                        }
                     } else {
                         closeSidebar(frame);
                     }
