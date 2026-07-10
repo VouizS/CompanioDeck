@@ -39,7 +39,7 @@ import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.1-r18";
+    private static final String INTERNAL_VERSION = "v1.2-r2";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -166,6 +166,8 @@ public class MainActivity extends Activity {
         stopActiveCoreIfNeeded();
         inPlayer = false;
         sidebarOpen = false;
+        playerLandscape = false;
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         playerLandscape = false;
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
 
@@ -733,6 +735,10 @@ public class MainActivity extends Activity {
             return;
         }
 
+        if (activeControlsLayer == null) {
+            addGameControls(frame, activeCoffeeView);
+        }
+
         String controlsLabel = controlsVisible ? "Ocultar controles" : "Mostrar controles";
         String scaleLabel = "Tela: " + activeCoffeeView.getScaleModeLabel();
         String orientationLabel = playerLandscape ? "Orientação: Vertical" : "Orientação: Horizontal";
@@ -759,6 +765,7 @@ public class MainActivity extends Activity {
                             setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
                             Toast.makeText(this, "Modo vertical/automático", Toast.LENGTH_SHORT).show();
                         }
+                        closeSidebar(frame);
                     } else {
                         closeSidebar(frame);
                     }
