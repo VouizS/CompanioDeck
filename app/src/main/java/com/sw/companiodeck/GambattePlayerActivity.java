@@ -106,6 +106,17 @@ public class GambattePlayerActivity extends Activity implements LifecycleOwner {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        Thread.UncaughtExceptionHandler previousHandler =
+                Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
+            try {
+                saveErrorReport(error);
+            } catch (Throwable ignored) {
+            }
+            if (previousHandler != null) {
+                previousHandler.uncaughtException(thread, error);
+            }
+        });
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE);
 
         Window window = getWindow();
@@ -160,7 +171,7 @@ public class GambattePlayerActivity extends Activity implements LifecycleOwner {
             }
 
             GLRetroViewData data = new GLRetroViewData(this);
-            data.setCoreFilePath(core.getAbsolutePath());
+            data.setCoreFilePath(CORE_LIBRARY);
             data.setGameFileBytes(rom);
             data.setSystemDirectory(system.getAbsolutePath());
             data.setSavesDirectory(saves.getAbsolutePath());
@@ -607,9 +618,9 @@ public class GambattePlayerActivity extends Activity implements LifecycleOwner {
     }
 
     private String saveErrorReport(Throwable error) {
-        String file = "CompanionDeck-v1.3-gambatte-error-" + System.currentTimeMillis() + ".txt";
+        String file = "CompanionDeck-v1.3-r4-r1-gambatte-error-" + System.currentTimeMillis() + ".txt";
         String report =
-                "Companion Deck v1.3-r3\n"
+                "Companion Deck v1.3-r4-r1\n"
                         + "Core: Gambatte native/libretro\n"
                         + "ABI: " + Build.SUPPORTED_ABIS[0] + "\n"
                         + "ROM: " + romName + "\n"

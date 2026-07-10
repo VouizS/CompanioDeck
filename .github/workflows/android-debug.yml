@@ -252,10 +252,10 @@ jobs:
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.3-r3-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/CompanionDeck-v1.3-r4-r1-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CompanionDeck-v1.3-r3-debug-apk
+          name: CompanionDeck-v1.3-r4-r1-debug-apk
           path: dist/*.apk

@@ -44,7 +44,7 @@ import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.3-r3";
+    private static final String INTERNAL_VERSION = "v1.3-r4-r1";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -824,7 +824,21 @@ public class MainActivity extends Activity {
         intent.putExtra(GambattePlayerActivity.EXTRA_ROM_URI, g.uri);
         intent.putExtra(GambattePlayerActivity.EXTRA_ROM_NAME, g.name);
         intent.putExtra(GambattePlayerActivity.EXTRA_FILE_NAME, g.fileName);
-        startActivity(intent);
+        try {
+            startActivity(intent);
+        } catch (android.content.ActivityNotFoundException error) {
+            Toast.makeText(
+                    this,
+                    "Player interno não registrado no Android. Atualize o Companion Deck.",
+                    Toast.LENGTH_LONG
+            ).show();
+        } catch (Throwable error) {
+            Toast.makeText(
+                    this,
+                    "Falha ao abrir o player: " + error.getClass().getSimpleName(),
+                    Toast.LENGTH_LONG
+            ).show();
+        }
     } private void showControlPanel(FrameLayout frame) {
         if (activeCoffeeView == null) {
             Toast.makeText(this, "Abra um jogo GB/GBC primeiro.", Toast.LENGTH_SHORT).show();
