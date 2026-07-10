@@ -24,7 +24,7 @@
         android:supportsRtl="true">
 
         <activity
-            android:name=".SameBoyPlayerActivity"
+            android:name=".GambattePlayerActivity"
             android:exported="false"
             android:screenOrientation="unspecified"
             android:configChanges="orientation|screenSize|keyboardHidden" />

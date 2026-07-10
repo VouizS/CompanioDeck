@@ -1,9 +1,9 @@
 Companion Deck v1.3 - Third-party notices
 
-SameBoy
-Game Boy and Game Boy Color emulator written in C.
-Project: https://github.com/LIJI32/SameBoy
-License: Expat License.
+Gambatte
+Game Boy and Game Boy Color libretro core.
+Project: https://github.com/libretro/gambatte-libretro
+License: GNU General Public License v2.0.
 
 LibretroDroid
 Android Libretro frontend used to host the native core.

@@ -44,7 +44,7 @@ import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.3-r2";
+    private static final String INTERNAL_VERSION = "v1.3-r3";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -450,7 +450,7 @@ public class MainActivity extends Activity {
 
         new AlertDialog.Builder(this)
                 .setTitle("Motor interno indisponível")
-                .setMessage("O Companion Deck só abre internamente sistemas que já têm motor real ligado. Agora o motor interno disponível é SameBoy nativo para arquivos .gb, .gbc ou .zip contendo uma ROM GB/GBC.\n\nSistema atual: " + system + "\nArquivo: " + file)
+                .setMessage("O Companion Deck só abre internamente sistemas que já têm motor real ligado. Agora o motor interno disponível é Gambatte nativo para arquivos .gb, .gbc ou .zip contendo uma ROM GB/GBC.\n\nSistema atual: " + system + "\nArquivo: " + file)
                 .setPositiveButton("Abrir externo", (d, w) -> openExternal(g))
                 .setNeutralButton("Perfil", (d, w) -> {
                     if (g != null) showProfile(g);
@@ -820,10 +820,10 @@ public class MainActivity extends Activity {
             return;
         }
 
-        Intent intent = new Intent(this, SameBoyPlayerActivity.class);
-        intent.putExtra(SameBoyPlayerActivity.EXTRA_ROM_URI, g.uri);
-        intent.putExtra(SameBoyPlayerActivity.EXTRA_ROM_NAME, g.name);
-        intent.putExtra(SameBoyPlayerActivity.EXTRA_FILE_NAME, g.fileName);
+        Intent intent = new Intent(this, GambattePlayerActivity.class);
+        intent.putExtra(GambattePlayerActivity.EXTRA_ROM_URI, g.uri);
+        intent.putExtra(GambattePlayerActivity.EXTRA_ROM_NAME, g.name);
+        intent.putExtra(GambattePlayerActivity.EXTRA_FILE_NAME, g.fileName);
         startActivity(intent);
     } private void showControlPanel(FrameLayout frame) {
         if (activeCoffeeView == null) {
@@ -993,7 +993,7 @@ private void showSidebar(FrameLayout frame) {
     private void showTechnicalInfo() {
         new AlertDialog.Builder(this)
                 .setTitle("Informações técnicas")
-                .setMessage("Companion Deck " + INTERNAL_VERSION + "\nInterface nativa AMOLED\nRuntime nativo preparado\nSem WebView como UI principal\nSem core web/CDN\nGB/GBC com SameBoy nativo")
+                .setMessage("Companion Deck " + INTERNAL_VERSION + "\nInterface nativa AMOLED\nRuntime nativo preparado\nSem WebView como UI principal\nSem core web/CDN\nGB/GBC com Gambatte nativo")
                 .setPositiveButton("OK", null)
                 .show();
     }

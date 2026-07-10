@@ -50,12 +50,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
+public class GambattePlayerActivity extends Activity implements LifecycleOwner {
     public static final String EXTRA_ROM_URI = "rom_uri";
     public static final String EXTRA_ROM_NAME = "rom_name";
     public static final String EXTRA_FILE_NAME = "file_name";
 
-    private static final String CORE_LIBRARY = "libsameboy_libretro_android.so";
+    private static final String CORE_LIBRARY = "libgambatte_libretro_android.so";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final int MAX_ROM_BYTES = 64 * 1024 * 1024;
 
@@ -128,8 +128,8 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
         root.setBackgroundColor(Color.BLACK);
         setContentView(root);
 
-        showLoading("Preparando SameBoy nativo...");
-        new Thread(this::loadRomAndStart, "SameBoyRomLoader").start();
+        showLoading("Preparando Gambatte nativo...");
+        new Thread(this::loadRomAndStart, "GambatteRomLoader").start();
     }
 
     private void loadRomAndStart() {
@@ -141,7 +141,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
             byte[] rom = readRom(Uri.parse(romUri), fileName);
             String key = buildSaveKey(romName, romUri);
 
-            File base = new File(getFilesDir(), "sameboy");
+            File base = new File(getFilesDir(), "gambatte");
             File system = new File(base, "system");
             File saves = new File(base, "saves");
             File states = new File(base, "states");
@@ -155,7 +155,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
             File core = new File(getApplicationInfo().nativeLibraryDir, CORE_LIBRARY);
             if (!core.isFile() || core.length() == 0) {
                 throw new IllegalStateException(
-                        "Core SameBoy ausente para " + Build.SUPPORTED_ABIS[0]
+                        "Core Gambatte ausente para " + Build.SUPPORTED_ABIS[0]
                 );
             }
 
@@ -164,8 +164,8 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
             data.setGameFileBytes(rom);
             data.setSystemDirectory(system.getAbsolutePath());
             data.setSavesDirectory(saves.getAbsolutePath());
-            data.setPreferLowLatencyAudio(true);
-            data.setSkipDuplicateFrames(true);
+            data.setPreferLowLatencyAudio(false);
+            data.setSkipDuplicateFrames(false);
             data.setRumbleEventsEnabled(false);
 
             if (saveRamFile.isFile() && saveRamFile.length() > 0) {
@@ -216,7 +216,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
 
         TextView label = new TextView(this);
         label.setText(
-                "Não foi possível iniciar o SameBoy nativo.\n\n"
+                "Não foi possível iniciar o Gambatte nativo.\n\n"
                         + compactError(error)
                         + (report.isEmpty() ? "" : "\n\nLog: " + report)
         );
@@ -339,7 +339,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
         panel.setBackgroundColor(Color.rgb(5, 7, 13));
 
         TextView title = new TextView(this);
-        title.setText("SameBoy");
+        title.setText("Gambatte");
         title.setTextSize(27);
         title.setTextColor(Color.WHITE);
         title.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -473,7 +473,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
                         this, compactError(error), Toast.LENGTH_LONG
                 ).show());
             }
-        }, "SameBoySaveState").start();
+        }, "GambatteSaveState").start();
     }
 
     private void loadQuickState() {
@@ -496,7 +496,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
                         this, compactError(error), Toast.LENGTH_LONG
                 ).show());
             }
-        }, "SameBoyLoadState").start();
+        }, "GambatteLoadState").start();
     }
 
     private void saveBatteryAsync() {
@@ -511,7 +511,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
             } finally {
                 saving.set(false);
             }
-        }, "SameBoySaveRAM").start();
+        }, "GambatteSaveRAM").start();
     }
 
     private void exitToLibrary() {
@@ -607,10 +607,10 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
     }
 
     private String saveErrorReport(Throwable error) {
-        String file = "CompanionDeck-v1.3-sameboy-error-" + System.currentTimeMillis() + ".txt";
+        String file = "CompanionDeck-v1.3-gambatte-error-" + System.currentTimeMillis() + ".txt";
         String report =
-                "Companion Deck v1.3-r2\n"
-                        + "Core: SameBoy native/libretro\n"
+                "Companion Deck v1.3-r3\n"
+                        + "Core: Gambatte native/libretro\n"
                         + "ABI: " + Build.SUPPORTED_ABIS[0] + "\n"
                         + "ROM: " + romName + "\n"
                         + "Erro: " + error + "\n\n"
@@ -729,7 +729,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
         private boolean pressed;
 
         NativeControlButton(int icon, String description, int keyCode) {
-            super(SameBoyPlayerActivity.this);
+            super(GambattePlayerActivity.this);
             this.icon = icon;
             this.keyCode = keyCode;
             setClickable(true);
