@@ -825,7 +825,21 @@ public class MainActivity extends Activity {
         intent.putExtra(GambattePlayerActivity.EXTRA_ROM_NAME, g.name);
         intent.putExtra(GambattePlayerActivity.EXTRA_FILE_NAME, g.fileName);
         try {
+            try {
             startActivity(intent);
+        } catch (android.content.ActivityNotFoundException error) {
+            Toast.makeText(
+                    this,
+                    "Player interno não registrado no Android. Atualize o Companion Deck.",
+                    Toast.LENGTH_LONG
+            ).show();
+        } catch (Throwable error) {
+            Toast.makeText(
+                    this,
+                    "Falha ao abrir o player: " + error.getClass().getSimpleName(),
+                    Toast.LENGTH_LONG
+            ).show();
+        }
         } catch (android.content.ActivityNotFoundException error) {
             Toast.makeText(
                     this,
