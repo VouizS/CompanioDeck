@@ -609,7 +609,7 @@ public class SameBoyPlayerActivity extends Activity implements LifecycleOwner {
     private String saveErrorReport(Throwable error) {
         String file = "CompanionDeck-v1.3-sameboy-error-" + System.currentTimeMillis() + ".txt";
         String report =
-                "Companion Deck v1.3\n"
+                "Companion Deck v1.3-r1\n"
                         + "Core: SameBoy native/libretro\n"
                         + "ABI: " + Build.SUPPORTED_ABIS[0] + "\n"
                         + "ROM: " + romName + "\n"
