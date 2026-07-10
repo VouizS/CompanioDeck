@@ -7,12 +7,17 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.provider.OpenableColumns;
 import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
@@ -39,7 +44,7 @@ import java.util.zip.ZipInputStream;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_PICK_ROM = 1201;
-    private static final String INTERNAL_VERSION = "v1.2-r3";
+    private static final String INTERNAL_VERSION = "v1.2-r4-r1";
     private static final String PREFS = "companion_deck_native_prefs";
     private static final String KEY_GAMES = "games_native_v1";
     private static final String[] PLATFORM_IDS = {"gbc", "gba", "snes", "psp", "ps1", "n64", "cubewii", "ps2", "manual"};
@@ -56,6 +61,8 @@ public class MainActivity extends Activity {
     private boolean controlsVisible = true;
     private boolean playerLandscape = false;
     private FrameLayout activeControlsLayer;
+    private boolean hapticsEnabled = true;
+    private int performanceProfile = 1;
 
     private LinearLayout content;
 
@@ -166,6 +173,8 @@ public class MainActivity extends Activity {
         stopActiveCoreIfNeeded();
         inPlayer = false;
         sidebarOpen = false;
+        playerLandscape = false;
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         playerLandscape = false;
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         playerLandscape = false;
@@ -454,75 +463,182 @@ public class MainActivity extends Activity {
 
 
 
+    private static final int ICON_UP = 1;
+    private static final int ICON_DOWN = 2;
+    private static final int ICON_LEFT = 3;
+    private static final int ICON_RIGHT = 4;
+    private static final int ICON_A = 5;
+    private static final int ICON_B = 6;
+    private static final int ICON_START = 7;
+    private static final int ICON_SELECT = 8;
+    private static final int ICON_CENTER = 9;
+    private static final int ICON_MENU = 10;
+
     private void addGameControls(FrameLayout frame, CoffeeGbPlayerView view) {
-        if (frame.findViewWithTag("realControls") != null) return;
+        View existing = frame.findViewWithTag("realControls");
+        if (existing != null) {
+            activeControlsLayer = (FrameLayout) existing;
+            activeControlsLayer.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
+            return;
+        }
+
         FrameLayout layer = new FrameLayout(this);
         layer.setTag("realControls");
         activeControlsLayer = layer;
         layer.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
         frame.addView(layer, new FrameLayout.LayoutParams(-1, -1));
+
         LinearLayout dpad = new LinearLayout(this);
         dpad.setOrientation(LinearLayout.VERTICAL);
         dpad.setGravity(Gravity.CENTER);
-
-        Button up = controlButton("▲", view, eu.rekawek.coffeegb.core.joypad.Button.UP);
-        Button down = controlButton("▼", view, eu.rekawek.coffeegb.core.joypad.Button.DOWN);
-
+        View up = gameControl(ICON_UP, "Cima", view, eu.rekawek.coffeegb.core.joypad.Button.UP);
+        View down = gameControl(ICON_DOWN, "Baixo", view, eu.rekawek.coffeegb.core.joypad.Button.DOWN);
         LinearLayout mid = new LinearLayout(this);
         mid.setOrientation(LinearLayout.HORIZONTAL);
-        Button left = controlButton("◀", view, eu.rekawek.coffeegb.core.joypad.Button.LEFT);
-        Button center = btn("●", false);
+        mid.setGravity(Gravity.CENTER);
+        View left = gameControl(ICON_LEFT, "Esquerda", view, eu.rekawek.coffeegb.core.joypad.Button.LEFT);
+        View center = gameControl(ICON_CENTER, "Direcional", null, null);
         center.setEnabled(false);
-        Button right = controlButton("▶", view, eu.rekawek.coffeegb.core.joypad.Button.RIGHT);
-        mid.addView(left, new LinearLayout.LayoutParams(dp(52), dp(52)));
-        mid.addView(center, new LinearLayout.LayoutParams(dp(52), dp(52)));
-        mid.addView(right, new LinearLayout.LayoutParams(dp(52), dp(52)));
-
-        dpad.addView(up, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        View right = gameControl(ICON_RIGHT, "Direita", view, eu.rekawek.coffeegb.core.joypad.Button.RIGHT);
+        mid.addView(left, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        mid.addView(center, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        mid.addView(right, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        dpad.addView(up, new LinearLayout.LayoutParams(dp(56), dp(56)));
         dpad.addView(mid);
-        dpad.addView(down, new LinearLayout.LayoutParams(dp(52), dp(52)));
-
-        FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(dp(170), dp(170), Gravity.BOTTOM | Gravity.LEFT);
-        dlp.setMargins(dp(18), 0, 0, dp(42));
+        dpad.addView(down, new LinearLayout.LayoutParams(dp(56), dp(56)));
+        FrameLayout.LayoutParams dlp = new FrameLayout.LayoutParams(dp(184), dp(184), Gravity.BOTTOM | Gravity.LEFT);
+        dlp.setMargins(dp(18), 0, 0, dp(38));
         layer.addView(dpad, dlp);
 
         LinearLayout ab = new LinearLayout(this);
         ab.setOrientation(LinearLayout.HORIZONTAL);
         ab.setGravity(Gravity.CENTER);
-        ab.addView(controlButton("B", view, eu.rekawek.coffeegb.core.joypad.Button.B), new LinearLayout.LayoutParams(dp(64), dp(64)));
-        ab.addView(controlButton("A", view, eu.rekawek.coffeegb.core.joypad.Button.A), new LinearLayout.LayoutParams(dp(64), dp(64)));
-        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(dp(150), dp(80), Gravity.BOTTOM | Gravity.RIGHT);
-        alp.setMargins(0, 0, dp(22), dp(78));
+        View b = gameControl(ICON_B, "Botão B", view, eu.rekawek.coffeegb.core.joypad.Button.B);
+        View a = gameControl(ICON_A, "Botão A", view, eu.rekawek.coffeegb.core.joypad.Button.A);
+        LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(dp(72), dp(72));
+        actionLp.setMargins(dp(4), 0, dp(4), 0);
+        ab.addView(b, actionLp);
+        ab.addView(a, actionLp);
+        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(dp(168), dp(88), Gravity.BOTTOM | Gravity.RIGHT);
+        alp.setMargins(0, 0, dp(18), dp(64));
         layer.addView(ab, alp);
 
         LinearLayout startSelect = new LinearLayout(this);
         startSelect.setOrientation(LinearLayout.HORIZONTAL);
         startSelect.setGravity(Gravity.CENTER);
-        startSelect.addView(controlButton("SELECT", view, eu.rekawek.coffeegb.core.joypad.Button.SELECT), new LinearLayout.LayoutParams(dp(94), dp(42)));
-        startSelect.addView(controlButton("START", view, eu.rekawek.coffeegb.core.joypad.Button.START), new LinearLayout.LayoutParams(dp(94), dp(42)));
-        FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(dp(210), dp(52), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        slp.setMargins(0, 0, 0, dp(24));
+        View select = gameControl(ICON_SELECT, "Select", view, eu.rekawek.coffeegb.core.joypad.Button.SELECT);
+        View start = gameControl(ICON_START, "Start", view, eu.rekawek.coffeegb.core.joypad.Button.START);
+        LinearLayout.LayoutParams systemLp = new LinearLayout.LayoutParams(dp(104), dp(44));
+        systemLp.setMargins(dp(4), 0, dp(4), 0);
+        startSelect.addView(select, systemLp);
+        startSelect.addView(start, systemLp);
+        FrameLayout.LayoutParams slp = new FrameLayout.LayoutParams(dp(232), dp(54), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        slp.setMargins(0, 0, 0, dp(18));
         layer.addView(startSelect, slp);
     }
 
-    private Button controlButton(String label, CoffeeGbPlayerView view, eu.rekawek.coffeegb.core.joypad.Button gbButton) {
-        Button b = btn(label, false);
-        b.setTextSize(label.length() > 2 ? 11 : 18);
-        b.setOnTouchListener((v, event) -> {
-            int action = event.getActionMasked();
-            if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN) {
-                view.setButtonPressed(gbButton, true);
-                return true;
+    private View gameControl(int iconType, String description, CoffeeGbPlayerView view, eu.rekawek.coffeegb.core.joypad.Button gbButton) {
+        return new GameControlButton(iconType, description, view, gbButton);
+    }
+
+    private class GameControlButton extends View {
+        private final Paint controlPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path iconPath = new Path();
+        private final RectF bounds = new RectF();
+        private final int iconType;
+        private final CoffeeGbPlayerView target;
+        private final eu.rekawek.coffeegb.core.joypad.Button gbButton;
+        private boolean pressed;
+
+        GameControlButton(int iconType, String description, CoffeeGbPlayerView target, eu.rekawek.coffeegb.core.joypad.Button gbButton) {
+            super(MainActivity.this);
+            this.iconType = iconType;
+            this.target = target;
+            this.gbButton = gbButton;
+            setClickable(true);
+            setFocusable(true);
+            setContentDescription(description);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float width = getWidth();
+            float height = getHeight();
+            float inset = dp(2);
+            bounds.set(inset, inset, width - inset, height - inset);
+            controlPaint.setStyle(Paint.Style.FILL);
+            if (!isEnabled()) controlPaint.setColor(Color.argb(150, 16, 22, 34));
+            else if (pressed) controlPaint.setColor(Color.rgb(74, 94, 255));
+            else controlPaint.setColor(Color.argb(232, 12, 17, 29));
+            float radius = Math.min(width, height) * 0.28f;
+            canvas.drawRoundRect(bounds, radius, radius, controlPaint);
+            controlPaint.setStyle(Paint.Style.STROKE);
+            controlPaint.setStrokeWidth(dp(1));
+            controlPaint.setColor(pressed ? Color.argb(230, 210, 220, 255) : Color.argb(90, 86, 124, 255));
+            canvas.drawRoundRect(bounds, radius, radius, controlPaint);
+            drawControlIcon(canvas, width / 2f, height / 2f, Math.min(width, height));
+        }
+
+        private void drawControlIcon(Canvas canvas, float cx, float cy, float size) {
+            controlPaint.setStyle(Paint.Style.FILL);
+            controlPaint.setColor(Color.rgb(245, 248, 255));
+            controlPaint.setStrokeCap(Paint.Cap.ROUND);
+            controlPaint.setStrokeJoin(Paint.Join.ROUND);
+            if (iconType >= ICON_UP && iconType <= ICON_RIGHT) {
+                float arrow = size * 0.23f;
+                iconPath.reset();
+                if (iconType == ICON_UP) {
+                    iconPath.moveTo(cx, cy - arrow); iconPath.lineTo(cx - arrow, cy + arrow * 0.72f); iconPath.lineTo(cx + arrow, cy + arrow * 0.72f);
+                } else if (iconType == ICON_DOWN) {
+                    iconPath.moveTo(cx, cy + arrow); iconPath.lineTo(cx - arrow, cy - arrow * 0.72f); iconPath.lineTo(cx + arrow, cy - arrow * 0.72f);
+                } else if (iconType == ICON_LEFT) {
+                    iconPath.moveTo(cx - arrow, cy); iconPath.lineTo(cx + arrow * 0.72f, cy - arrow); iconPath.lineTo(cx + arrow * 0.72f, cy + arrow);
+                } else {
+                    iconPath.moveTo(cx + arrow, cy); iconPath.lineTo(cx - arrow * 0.72f, cy - arrow); iconPath.lineTo(cx - arrow * 0.72f, cy + arrow);
+                }
+                iconPath.close(); canvas.drawPath(iconPath, controlPaint); return;
             }
-            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_POINTER_UP) {
-                view.setButtonPressed(gbButton, false);
+            if (iconType == ICON_CENTER) {
+                controlPaint.setColor(Color.argb(170, 162, 177, 204)); canvas.drawCircle(cx, cy, size * 0.12f, controlPaint); return;
+            }
+            if (iconType == ICON_MENU) {
+                controlPaint.setStrokeWidth(Math.max(dp(2), size * 0.055f));
+                controlPaint.setStyle(Paint.Style.STROKE);
+                float half = size * 0.20f;
+                canvas.drawLine(cx - half, cy - half * 0.72f, cx + half, cy - half * 0.72f, controlPaint);
+                canvas.drawLine(cx - half, cy, cx + half, cy, controlPaint);
+                canvas.drawLine(cx - half, cy + half * 0.72f, cx + half, cy + half * 0.72f, controlPaint); return;
+            }
+            String label = iconType == ICON_A ? "A" : iconType == ICON_B ? "B" : iconType == ICON_START ? "START" : "SELECT";
+            controlPaint.setStyle(Paint.Style.FILL);
+            controlPaint.setTextAlign(Paint.Align.CENTER);
+            controlPaint.setFakeBoldText(true);
+            controlPaint.setTextSize((iconType == ICON_START || iconType == ICON_SELECT) ? size * 0.22f : size * 0.34f);
+            Paint.FontMetrics fm = controlPaint.getFontMetrics();
+            canvas.drawText(label, cx, cy - (fm.ascent + fm.descent) / 2f, controlPaint);
+            controlPaint.setFakeBoldText(false);
+        }
+
+        @Override public boolean onTouchEvent(MotionEvent event) {
+            if (!isEnabled()) return false;
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                pressed = true; setScaleX(0.92f); setScaleY(0.92f);
+                if (target != null && gbButton != null) target.setButtonPressed(gbButton, true);
+                if (hapticsEnabled) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                invalidate(); return true;
+            }
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL || action == MotionEvent.ACTION_OUTSIDE) {
+                if (target != null && gbButton != null) target.setButtonPressed(gbButton, false);
+                pressed = false; setScaleX(1f); setScaleY(1f); invalidate();
+                if (action == MotionEvent.ACTION_UP) performClick();
                 return true;
             }
             return true;
-        });
-        return b;
-    }
+        }
 
+        @Override public boolean performClick() { super.performClick(); return true; }
+    }
 
     private void pickRom() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -736,24 +852,20 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Abra um jogo GB/GBC primeiro.", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        if (activeControlsLayer == null) {
-            addGameControls(frame, activeCoffeeView);
-        }
+        if (activeControlsLayer == null) addGameControls(frame, activeCoffeeView);
 
         String controlsLabel = controlsVisible ? "Ocultar controles" : "Mostrar controles";
         String scaleLabel = "Tela: " + activeCoffeeView.getScaleModeLabel();
         String orientationLabel = playerLandscape ? "Orientação: Vertical" : "Orientação: Horizontal";
-        String[] options = new String[] { controlsLabel, scaleLabel, orientationLabel, "Continuar" };
+        String hapticLabel = hapticsEnabled ? "Resposta tátil: Ligada" : "Resposta tátil: Desligada";
+        String[] options = new String[] {controlsLabel, scaleLabel, orientationLabel, hapticLabel, "Continuar"};
 
         new AlertDialog.Builder(this)
                 .setTitle("Controles GB/GBC")
                 .setItems(options, (dialog, which) -> {
                     if (which == 0) {
                         controlsVisible = !controlsVisible;
-                        if (activeControlsLayer != null) {
-                            activeControlsLayer.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
-                        }
+                        if (activeControlsLayer != null) activeControlsLayer.setVisibility(controlsVisible ? View.VISIBLE : View.GONE);
                         Toast.makeText(this, controlsVisible ? "Controles visíveis" : "Controles ocultos", Toast.LENGTH_SHORT).show();
                     } else if (which == 1) {
                         activeCoffeeView.cycleScaleMode();
@@ -768,14 +880,41 @@ public class MainActivity extends Activity {
                             Toast.makeText(this, "Modo vertical/automático", Toast.LENGTH_SHORT).show();
                         }
                         closeSidebar(frame);
+                    } else if (which == 3) {
+                        hapticsEnabled = !hapticsEnabled;
+                        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("player_haptics", hapticsEnabled).apply();
+                        Toast.makeText(this, hapticsEnabled ? "Resposta tátil ligada" : "Resposta tátil desligada", Toast.LENGTH_SHORT).show();
                     } else {
                         closeSidebar(frame);
                     }
-                })
-                .show();
+                }).show();
+    } private void showPerformancePanel(FrameLayout frame) {
+        if (activeCoffeeView == null) {
+            Toast.makeText(this, "Abra um jogo GB/GBC primeiro.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String profileLabel = "Perfil: " + activeCoffeeView.getPerformanceProfileLabel();
+        String turboLabel = activeCoffeeView.isTurboEnabled() ? "Avanço rápido: Ligado" : "Avanço rápido: Desligado";
+        String[] options = new String[] {profileLabel, turboLabel, "Continuar"};
+
+        new AlertDialog.Builder(this)
+                .setTitle("Desempenho GB/GBC")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        performanceProfile = (performanceProfile + 1) % 3;
+                        activeCoffeeView.setPerformanceProfile(performanceProfile);
+                        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putInt("player_performance_profile", performanceProfile).apply();
+                        Toast.makeText(this, "Perfil: " + activeCoffeeView.getPerformanceProfileLabel(), Toast.LENGTH_SHORT).show();
+                    } else if (which == 1) {
+                        activeCoffeeView.setTurboEnabled(!activeCoffeeView.isTurboEnabled());
+                        Toast.makeText(this, activeCoffeeView.isTurboEnabled() ? "Avanço rápido ligado" : "Avanço rápido desligado", Toast.LENGTH_SHORT).show();
+                    } else {
+                        closeSidebar(frame);
+                    }
+                }).show();
     }
 
-    private void showSidebar(FrameLayout frame) {
+private void showSidebar(FrameLayout frame) {
         if (sidebarOpen) return;
         sidebarOpen = true;
 
@@ -797,7 +936,7 @@ public class MainActivity extends Activity {
         resume.setOnClickListener(v -> closeSidebar(frame));
         Button config = btn("Controles", false);
         config.setOnClickListener(v -> showControlPanel(frame));
-        Button external = btn("Abrir externo", false);
+        Button performance = btn("Desempenho", false); performance.setOnClickListener(v -> showPerformancePanel(frame)); Button external = btn("Abrir externo", false);
         external.setOnClickListener(v -> openExternal(activePlayerGame));
         Button library = btn("Biblioteca", false);
         library.setOnClickListener(v -> {
@@ -815,7 +954,7 @@ public class MainActivity extends Activity {
 
         addSideButton(side, resume);
         addSideButton(side, config);
-        addSideButton(side, external);
+        addSideButton(side, performance); addSideButton(side, external);
         addSideButton(side, library);
         addSideButton(side, exit);
 

@@ -40,13 +40,13 @@ public class CoffeeGbPlayerView extends View {
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Object frameLock = new Object();
-    private final int[] latestFrame = new int[GB_W * GB_H];
+    private final int[] latestFrame = new int[GB_W * GB_H]; private final int[] frameScratch = new int[GB_W * GB_H];
     private final Bitmap frameBitmap = Bitmap.createBitmap(GB_W, GB_H, Bitmap.Config.ARGB_8888);
 
     private volatile boolean running;
     private volatile boolean hasFrame;
     private volatile String status = "Carregando core GB/GBC...";
-    private volatile int scaleMode = 0;
+    private volatile int scaleMode = 0; private volatile int performanceProfile = 1; private volatile int renderStride = 1; private volatile int renderCounter = 0; private volatile long targetFrameMs = 17L; private volatile boolean turboEnabled = false;
     private volatile String sourceInfo = "";
 
     private Runnable onFirstFrameListener;
@@ -75,6 +75,27 @@ public class CoffeeGbPlayerView extends View {
         return "Conforto";
     }
 
+    public void setPerformanceProfile(int profile) {
+        performanceProfile = Math.max(0, Math.min(2, profile));
+        renderCounter = 0;
+        if (performanceProfile == 0) { renderStride = 1; targetFrameMs = 17L; }
+        else if (performanceProfile == 2) { renderStride = 2; targetFrameMs = 16L; }
+        else { renderStride = 1; targetFrameMs = 16L; }
+    }
+    public String getPerformanceProfileLabel() {
+        if (performanceProfile == 0) return "Compatibilidade";
+        if (performanceProfile == 2) return "Desempenho";
+        return "Balanceado";
+    }
+    public void setTurboEnabled(boolean enabled) { turboEnabled = enabled; }
+    public boolean isTurboEnabled() { return turboEnabled; }
+    private boolean shouldRenderFrame() {
+        if (!hasFrame) return true;
+        int stride = Math.max(1, renderStride);
+        if (stride == 1) return true;
+        renderCounter = (renderCounter + 1) % stride;
+        return renderCounter == 0;
+    }
     public void loadGame(Uri uri, String title) {
         stopEmulation();
         hasFrame = false;
@@ -194,39 +215,27 @@ public class CoffeeGbPlayerView extends View {
 
     private void startLoop() {
         emuThread = new Thread(() -> {
+            try { android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DISPLAY); } catch (Throwable ignored) { }
             final int ticksPerFrame = Gameboy.TICKS_PER_FRAME;
-
             while (running && gameboy != null) {
                 long start = System.nanoTime();
-
                 try {
-                    for (int i = 0; i < ticksPerFrame && running && gameboy != null; i++) {
-                        gameboy.tick();
-                    }
+                    for (int i = 0; i < ticksPerFrame && running && gameboy != null; i++) gameboy.tick();
                 } catch (Throwable t) {
                     String reportPath = saveCoreErrorReport("core-loop", t);
-                    status = "Core pausado: " + compactError(t) + (reportPath.isEmpty() ? "" : "\nLog salvo: " + reportPath);
-                    running = false;
-                    postInvalidate();
-                    break;
+                    status = "Core pausado: " + compactError(t) + (reportPath.isEmpty() ? "" : "
+Log salvo: " + reportPath);
+                    running = false; postInvalidate(); break;
                 }
-
-                long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
-                long sleep = 16L - elapsedMs;
-
-                if (sleep > 0) {
-                    try {
-                        Thread.sleep(sleep);
-                    } catch (InterruptedException ignored) {
-                    }
+                if (!turboEnabled) {
+                    long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
+                    long sleep = targetFrameMs - elapsedMs;
+                    if (sleep > 0) try { Thread.sleep(sleep); } catch (InterruptedException ignored) { }
                 }
             }
         }, "CoffeeGbCoreLoop");
-
         emuThread.start();
-    }
-
-    private void pushFrame(int[] rgb) {
+    } private void pushFrame(int[] rgb) {
         boolean firstFrame;
 
         synchronized (frameLock) {
@@ -250,7 +259,7 @@ public class CoffeeGbPlayerView extends View {
 
     public void setButtonPressed(Button button, boolean pressed) {
         EventBusImpl bus = eventBus;
-        if (bus == null || button == null || !hasFrame) return;
+        if (bus == null || button == null) return;
 
         if (pressed) {
             bus.post(new ButtonPressEvent(button));
@@ -366,7 +375,8 @@ public class CoffeeGbPlayerView extends View {
         }
 
         String body = "Companion Deck Core Error\n"
-                + "Version: v1.1-r11\n"
+                + "Version: v1.2-r4-r1
+"
                 + "Phase: " + phase + "\n"
                 + "Source: " + (sourceInfo == null ? "" : sourceInfo) + "\n"
                 + "Error: " + compactError(t) + "\n\n"
